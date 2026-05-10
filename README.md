@@ -90,6 +90,8 @@ python daemon.py
 
 API documentation is available at `/api/docs/` when the server is running.
 
+You can also import and test the API collection in Hoppscotch: [Open in Hoppscotch](https://hopp.sh/r/EpWjanJFptE9)
+
 ## Configuration
 
 ### Server
