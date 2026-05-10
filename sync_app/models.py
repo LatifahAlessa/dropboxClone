@@ -1,0 +1,31 @@
+from django.db import models
+from .constants import OPERATION_CHOICES
+from uuid_extensions import uuid7
+
+def generate_uuid():
+    return uuid7()
+
+class File(models.Model):
+    id = models.UUIDField(primary_key=True, default=generate_uuid, editable=False)
+    path = models.CharField(max_length=500, unique=True)
+    name = models.CharField(max_length=255)
+    is_deleted = models.BooleanField(default=False)
+    current_version = models.IntegerField(default=1)
+    last_modified_time = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.path
+
+
+class FileVersion(models.Model):
+    id = models.UUIDField(primary_key=True, default=generate_uuid, editable=False)
+    file = models.ForeignKey('File', on_delete=models.CASCADE, related_name="versions")
+    version_num = models.IntegerField()
+    operation_type = models.CharField(max_length=20, choices=OPERATION_CHOICES)
+    hash = models.CharField(max_length=128, blank=True, null=True)
+    size = models.BigIntegerField(default=0)
+    storage_path = models.CharField(max_length=500, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.file.path} v{self.version_num}"
