@@ -126,9 +126,9 @@ def get_file_history(file_id):
 
 # GET CHANGES
 def get_changes(since_timestamp):
-    versions = FileVersion.objects.filter(
-        created_at__gt=since_timestamp
-    ).select_related('file').order_by('created_at')
+    versions = FileVersion.objects.select_related('file').order_by('created_at')
+    if since_timestamp:
+        versions = versions.filter(created_at__gt=since_timestamp)
     return versions
 
 

@@ -1,4 +1,5 @@
 from django.http import HttpResponse
+from django.utils import timezone
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework import status
@@ -126,10 +127,10 @@ class FileViewSet(ViewSet):
 
 @api_view(['GET'])
 def get_changes(request):
-    since = request.query_params.get('since', '1970-01-01T00:00:00Z')
+    since = request.query_params.get('since')
     versions = services.get_changes(since)
 
     return Response({
         'changes': FileVersionSerializer(versions, many=True).data,
-        'last_sync': versions.last().created_at if versions.exists() else since
+        'last_sync': versions.last().created_at if versions.exists() else timezone.now()
     }, status=status.HTTP_200_OK)
