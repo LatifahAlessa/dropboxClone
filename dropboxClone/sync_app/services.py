@@ -17,7 +17,7 @@ def upload_file(path, name, file_data, client_version):
     new_version = file_obj.current_version + 1 if not created else 1
     storage_key = f"v{new_version}/{path.lstrip('/')}"
 
-    storage.upload_to_minio(file_data, storage_key)
+    storage.upload_to_storage(file_data, storage_key)
 
     FileVersion.objects.create(
         file=file_obj,
@@ -38,7 +38,7 @@ def upload_file(path, name, file_data, client_version):
 
     for version in old_versions:
         if version.storage_path:
-            storage.delete_from_minio(version.storage_path)
+            storage.delete_from_storage(version.storage_path)
         version.delete()
 
     return file_obj, 'created' if created else 'updated'
@@ -92,7 +92,7 @@ def rename_file(file_id, new_path, new_name):
             file_obj.path.lstrip('/'),
             new_path.lstrip('/')
         )
-        storage.rename_in_minio(latest_version.storage_path, new_storage_key)
+        storage.rename_in_storage(latest_version.storage_path, new_storage_key)
         latest_version.storage_path = new_storage_key
         latest_version.save()
 
@@ -157,7 +157,7 @@ def download_file(file_id, version_num=None):
     if not version or not version.storage_path:
         return None, None, None, 'file_not_found'
 
-    file_data = storage.download_from_minio(version.storage_path)
+    file_data = storage.download_from_storage(version.storage_path)
 
     return file_obj, version, file_data, 'ok'
 

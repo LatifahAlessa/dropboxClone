@@ -11,21 +11,21 @@ s3 = boto3.client(
     region_name='us-east-1'
 )
 
-def upload_to_minio(file_data, storage_key):
+def upload_to_storage(file_data, storage_key):
     s3.put_object(
         Bucket=settings.MINIO_BUCKET,
         Key=storage_key,
         Body=file_data
     )
 
-def download_from_minio(storage_key):
+def download_from_storage(storage_key):
     response = s3.get_object(
         Bucket=settings.MINIO_BUCKET,
         Key=storage_key
     )
     return response['Body'].read()
 
-def delete_from_minio(storage_key):
+def delete_from_storage(storage_key):
     s3.delete_object(
         Bucket=settings.MINIO_BUCKET,
         Key=storage_key
@@ -70,7 +70,7 @@ def set_trash_lifecycle_policy():
     )
 
 
-def rename_in_minio(old_key, new_key):
+def rename_in_storage(old_key, new_key):
     s3.copy_object(
         Bucket=settings.MINIO_BUCKET,
         CopySource={'Bucket': settings.MINIO_BUCKET, 'Key': old_key},
