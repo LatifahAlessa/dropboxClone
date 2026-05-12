@@ -3,6 +3,7 @@ import hashlib
 import requests
 from constants import SERVER_URL
 from messages import *
+from auth import authenticated_request
 
 WATCHED_FOLDER = None
 
@@ -26,7 +27,8 @@ def upload_file(local_path, state, is_new):
             return state, False
 
     with open(local_path, 'rb') as f:
-        response = requests.post(
+        response = authenticated_request(
+            'POST',
             f'{SERVER_URL}/files/',
             data={
                 'path': relative_path,
@@ -35,6 +37,9 @@ def upload_file(local_path, state, is_new):
             files={'file': f},
             headers={'X-Client-Version': str(current_version)}
         )
+
+    if not response:
+        return state, False
 
     if response.status_code in (200, 201):
         data = response.json()
@@ -56,7 +61,10 @@ def delete_file(local_path, state):
         print(f'{DELETE_SKIPPED}: {relative_path}')
         return state, False
 
-    response = requests.delete(f'{SERVER_URL}/files/{file_id}/')
+    response = authenticated_request('DELETE', f'{SERVER_URL}/files/{file_id}/')
+
+    if not response:
+        return state, False
 
     if response.status_code == 200:
         del state['files'][relative_path]
@@ -77,13 +85,17 @@ def rename_file(old_path, new_path, state):
         print(f'{RENAME_SKIPPED}: {old_relative}')
         return state, False
 
-    response = requests.patch(
+    response = authenticated_request(
+        'PATCH',
         f'{SERVER_URL}/files/{file_id}/',
         json={
             'new_path': new_relative,
             'new_name': os.path.basename(new_path)
         }
     )
+
+    if not response:
+        return state, False
 
     if response.status_code == 200:
         state['files'][new_relative] = file_id
@@ -96,7 +108,10 @@ def rename_file(old_path, new_path, state):
 
 
 def download_from_server(file_id, local_path, state, file_path):
-    response = requests.get(f'{SERVER_URL}/files/{file_id}/download/')
+    response = authenticated_request('GET', f'{SERVER_URL}/files/{file_id}/download/')
+
+    if not response:
+        return
 
     if response.status_code == 200:
         os.makedirs(os.path.dirname(local_path), exist_ok=True)
@@ -119,7 +134,7 @@ def apply_change(change, state):
         state['files'][file_path] = file_id
         state['versions'][str(file_id)] = change['version_num']
 
-    elif operation == 'RESTORE': 
+    elif operation == 'RESTORE':
         state['files'][file_path] = file_id
         state['versions'][str(file_id)] = change['version_num']
         download_from_server(file_id, local_path, state, file_path)
@@ -133,15 +148,15 @@ def apply_change(change, state):
             del state['files'][file_path]
 
     elif operation == 'RENAME':
-        new_path = change.get('file_path') 
+        new_path = change.get('file_path')
         new_name = change.get('file_name')
-    
+
         old_path = None
         for path, fid in state['files'].items():
             if fid == file_id:
                 old_path = path
                 break
-    
+
         if old_path and new_path and old_path != new_path:
             old_local_path = os.path.join(WATCHED_FOLDER, old_path.lstrip('/'))
             new_local_path = os.path.join(WATCHED_FOLDER, new_path.lstrip('/'))
@@ -156,24 +171,27 @@ def apply_change(change, state):
 
 def initialize(state):
     print(INITALIZING_CLIENT)
-    
-    response = requests.get(f'{SERVER_URL}/files/')
-    
+
+    response = authenticated_request('GET', f'{SERVER_URL}/files/')
+
+    if not response:
+        return state
+
     if response.status_code == 200:
         files = response.json()
-        
+
         if not files:
             print(SERVER_EMPTY)
             state['last_sync'] = None
             return state
 
         print(f' downloading {len(files)} files from server...')
-        
+
         for file in files:
             file_id = file['id']
             file_path = file['path']
             local_path = os.path.join(WATCHED_FOLDER, file_path.lstrip('/'))
-            
+
             download_from_server(file_id, local_path, state, file_path)
             state['files'][file_path] = file_id
             state['versions'][str(file_id)] = file['current_version']

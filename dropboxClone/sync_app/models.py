@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings
 from .constants import OPERATION_CHOICES
 from uuid_extensions import uuid7
 
@@ -7,11 +8,15 @@ def generate_uuid():
 
 class File(models.Model):
     id = models.UUIDField(primary_key=True, default=generate_uuid, editable=False)
-    path = models.CharField(max_length=500, unique=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='files')
+    path = models.CharField(max_length=500)
     name = models.CharField(max_length=255)
     is_deleted = models.BooleanField(default=False)
     current_version = models.IntegerField(default=1)
     last_modified_time = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user', 'path') 
 
     def __str__(self):
         return self.path

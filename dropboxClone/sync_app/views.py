@@ -16,12 +16,13 @@ class FileViewSet(ViewSet):
     retrieve: GET   /api/files/<id>/
     partial_update: PATCH /api/files/<id>/
     destroy: DELETE /api/files/<id>/
+    download: GET   /api/files/<id>/download/
     history: GET    /api/files/<id>/history/
     restore: POST   /api/files/<id>/restore/
     """
 
     def list(self, request):
-        files = services.get_all_files()
+        files = services.get_all_files(request.user)
         return Response(
             FileSerializer(files, many=True).data,
             status=status.HTTP_200_OK
@@ -42,6 +43,7 @@ class FileViewSet(ViewSet):
         client_version = int(request.headers.get('X-Client-Version', 0))
 
         file_obj, result = services.upload_file(
+            user=request.user,
             path=path,
             name=name,
             file_data=file_data.read(),
@@ -54,7 +56,7 @@ class FileViewSet(ViewSet):
         return Response(FileSerializer(file_obj).data, status=status.HTTP_201_CREATED)
 
     def retrieve(self, request, pk=None):
-        file_obj = services.get_file(pk)
+        file_obj = services.get_file(request.user, pk)
 
         if not file_obj:
             return Response({'error': FILE_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
@@ -64,7 +66,7 @@ class FileViewSet(ViewSet):
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
         version_num = request.query_params.get('version')
-        file_obj, version, file_data, result = services.download_file(pk, version_num)
+        file_obj, version, file_data, result = services.download_file(request.user, pk, version_num)
 
         if result == 'not_found':
             return Response({'error': FILE_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
@@ -91,7 +93,7 @@ class FileViewSet(ViewSet):
         new_path = serializer.validated_data.get('new_path')
         new_name = serializer.validated_data.get('new_name')
 
-        file_obj, result = services.rename_file(pk, new_path, new_name)
+        file_obj, result = services.rename_file(request.user, pk, new_path, new_name)
 
         if result == 'not_found':
             return Response({'error': FILE_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
@@ -99,7 +101,7 @@ class FileViewSet(ViewSet):
         return Response(FileSerializer(file_obj).data, status=status.HTTP_200_OK)
 
     def destroy(self, request, pk=None):
-        file_obj, result = services.delete_file(pk)
+        file_obj, result = services.delete_file(request.user, pk)
 
         if result == 'not_found':
             return Response({'error': FILE_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
@@ -108,7 +110,7 @@ class FileViewSet(ViewSet):
 
     @action(detail=True, methods=['get'])
     def history(self, request, pk=None):
-        versions, result = services.get_file_history(pk)
+        versions, result = services.get_file_history(request.user, pk)
 
         if result == 'not_found':
             return Response({'error': FILE_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
@@ -117,7 +119,7 @@ class FileViewSet(ViewSet):
 
     @action(detail=True, methods=['post'])
     def restore(self, request, pk=None):
-        file_obj, result = services.restore_file(pk)
+        file_obj, result = services.restore_file(request.user, pk)
 
         if result == 'not_found':
             return Response({'error': FILE_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)

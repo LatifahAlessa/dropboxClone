@@ -3,11 +3,11 @@ import os
 import sys
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-import requests
 import json
 from constants import *
 from messages import FETCH_CHANGES, WATCHING
 import client_services
+from auth import authenticated_request, login, load_tokens
 
 
 def load_state():
@@ -77,7 +77,11 @@ class SyncHandler(FileSystemEventHandler):
 def fetch_changes(state, downloading, watched_folder):
     since = state.get('last_sync')
     params = f'?since={since}' if since else ''
-    response = requests.get(f'{SERVER_URL}/sync/changes{params}')
+    response = authenticated_request('GET', f'{SERVER_URL}/sync/changes{params}')
+
+    if not response:
+        return
+
 
     if response.status_code == 200:
         data = response.json()
@@ -98,9 +102,31 @@ def is_new_client(state):
     return not state['files'] and state['last_sync'] is None
 
 
+def authenticate():
+    tokens = load_tokens()
+    if tokens:
+        print('using saved credentials.')
+        return True
+
+    print('--- login ---')
+    username = input('username: ')
+    password = input('password: ')
+
+    tokens = login(username, password)
+    if tokens:
+        print('login successful.')
+        return True
+    else:
+        print('login failed.')
+        return False
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('usage: python daemon.py <folder_to_watch>')
+        exit(1)
+        
+    if not authenticate():
         exit(1)
 
     WATCHED_FOLDER = os.path.abspath(sys.argv[1])
