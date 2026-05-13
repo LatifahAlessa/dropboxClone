@@ -66,7 +66,7 @@ class FileViewSet(ViewSet):
     @action(detail=True, methods=['get'])
     def download(self, request, pk=None):
         version_num = request.query_params.get('version')
-        file_obj, version, file_data, result = services.download_file(request.user, pk, version_num)
+        download_url, file_hash, result = services.download_file(request.user, pk, version_num)
 
         if result == 'not_found':
             return Response({'error': FILE_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
@@ -75,11 +75,10 @@ class FileViewSet(ViewSet):
         if result == 'file_not_found':
             return Response({'error': 'file content not found'}, status=status.HTTP_404_NOT_FOUND)
 
-        return HttpResponse(
-            file_data,
-            content_type='application/octet-stream',
-            headers={'Content-Disposition': f'attachment; filename="{file_obj.name}"'}
-        )
+        return Response({
+            'download_url': download_url,
+            'hash': file_hash
+        }, status=status.HTTP_200_OK)
 
     def partial_update(self, request, pk=None):
         serializer = FileRenameSerializer(data=request.data)
