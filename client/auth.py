@@ -2,15 +2,17 @@ import os
 import json
 import requests
 from constants import SERVER_URL
+from messages import LOGIN_FAILED, NOT_AUTHENTICATED, SESSION_EXPIRED
 
 TOKEN_FILE = 'tokens.json'
 
 
 def load_tokens():
-    if os.path.exists(TOKEN_FILE):
-        with open(TOKEN_FILE, 'r') as f:
-            return json.load(f)
-    return None
+    if not os.path.exists(TOKEN_FILE):
+        return None
+
+    with open(TOKEN_FILE, 'r') as f:
+        return json.load(f)
 
 
 def save_tokens(tokens):
@@ -24,13 +26,13 @@ def login(username, password):
         json={'username': username, 'password': password}
     )
 
-    if response.status_code == 200:
-        tokens = response.json()
-        save_tokens(tokens)
-        return tokens
-    else:
-        print(f'login failed: {response.status_code} - {response.text}')
+    if response.status_code != 200:
+        print(f'{LOGIN_FAILED}: {response.status_code} - {response.text}')
         return None
+        
+    tokens = response.json()
+    save_tokens(tokens)
+    return tokens
 
 
 def refresh_access_token():
@@ -43,41 +45,33 @@ def refresh_access_token():
         json={'refresh': tokens['refresh']}
     )
 
-    if response.status_code == 200:
-        new_access = response.json()['access']
-        tokens['access'] = new_access
-        save_tokens(tokens)
-        return tokens
-    else:
+    if response.status_code != 200:
         return None
 
+    tokens['access'] = response.json()['access']
+    save_tokens(tokens)
+    return tokens
 
-def get_auth_header():
+
+def authenticated_request(method, url, headers = None, **kwargs):
+    if headers is None:
+        headers = {}
     tokens = load_tokens()
+
     if not tokens:
-        return None
-    return {'Authorization': f'Bearer {tokens["access"]}'}
-
-
-def authenticated_request(method, url, **kwargs):
-    """Make a request with auth. Retry once with refreshed token on 401."""
-    headers = kwargs.pop('headers', {})
-    auth_header = get_auth_header()
-
-    if not auth_header:
-        print('not authenticated. please login first.')
+        print(NOT_AUTHENTICATED)
         return None
 
-    headers.update(auth_header)
+    headers['Authorization'] = f'Bearer {tokens["access"]}'
     response = requests.request(method, url, headers=headers, **kwargs)
 
-    if response.status_code == 401:
-        refreshed = refresh_access_token()
-        if refreshed:
-            headers.update({'Authorization': f'Bearer {refreshed["access"]}'})
-            response = requests.request(method, url, headers=headers, **kwargs)
-        else:
-            print('session expired. please login again.')
-            return None
+    if response.status_code != 401:
+        return response
 
-    return response
+    refreshed = refresh_access_token()
+    if not refreshed:
+        print(SESSION_EXPIRED)
+        return None
+
+    headers['Authorization'] = f'Bearer {refreshed["access"]}'
+    return requests.request(method, url, headers=headers, **kwargs)

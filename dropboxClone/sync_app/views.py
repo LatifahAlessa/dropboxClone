@@ -130,7 +130,7 @@ class FileViewSet(ViewSet):
 @api_view(['GET'])
 def get_changes(request):
     since = request.query_params.get('since')
-    versions = services.get_changes(since)
+    versions = services.get_changes(request.user, since)
 
     return Response({
         'changes': FileVersionSerializer(versions, many=True).data,

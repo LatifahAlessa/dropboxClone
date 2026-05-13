@@ -113,12 +113,12 @@ def authenticate():
     password = input('password: ')
 
     tokens = login(username, password)
-    if tokens:
-        print('login successful.')
-        return True
-    else:
+    if not tokens:
         print('login failed.')
         return False
+
+    print('login successful.')
+    return True
 
 
 if __name__ == '__main__':
