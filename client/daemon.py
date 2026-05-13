@@ -1,5 +1,6 @@
 import time
 import os
+import sys
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import requests
@@ -13,7 +14,7 @@ def load_state():
     if os.path.exists(STATE_FILE):
         with open(STATE_FILE, 'r') as f:
             return json.load(f)
-    return {'last_sync': '1970-01-01T00:00:00Z', 'files': {}, 'versions': {}, 'hashes': {}}
+    return {'last_sync': None, 'files': {}, 'versions': {}, 'hashes': {}}
 
 
 def save_state(state):
@@ -73,9 +74,10 @@ class SyncHandler(FileSystemEventHandler):
         save_state(self.state)
 
 
-def fetch_changes(state, downloading):
-    since = state.get('last_sync', '1970-01-01T00:00:00Z')
-    response = requests.get(f'{SERVER_URL}/sync/changes?since={since}')
+def fetch_changes(state, downloading, watched_folder):
+    since = state.get('last_sync')
+    params = f'?since={since}' if since else ''
+    response = requests.get(f'{SERVER_URL}/sync/changes{params}')
 
     if response.status_code == 200:
         data = response.json()
@@ -84,7 +86,7 @@ def fetch_changes(state, downloading):
         if changes:
             print(f'{len(changes)} {FETCH_CHANGES}')
             for change in changes:
-                local_path = os.path.join(WATCHED_FOLDER, change['file_path'].lstrip('/'))
+                local_path = os.path.join(watched_folder, change['file_path'].lstrip('/'))
                 downloading.add(local_path)
                 state = client_services.apply_change(change, state)
                 downloading.discard(local_path)
@@ -93,10 +95,17 @@ def fetch_changes(state, downloading):
 
 
 def is_new_client(state):
-    return not state['files'] and state['last_sync'] == '1970-01-01T00:00:00Z'
+    return not state['files'] and state['last_sync'] is None
 
 
 if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print('usage: python daemon.py <folder_to_watch>')
+        exit(1)
+
+    WATCHED_FOLDER = os.path.abspath(sys.argv[1])
+    client_services.WATCHED_FOLDER = WATCHED_FOLDER
+
     os.makedirs(WATCHED_FOLDER, exist_ok=True)
 
     handler = SyncHandler()
@@ -112,7 +121,7 @@ if __name__ == '__main__':
 
     try:
         while True:
-            fetch_changes(handler.state, handler.downloading)
+            fetch_changes(handler.state, handler.downloading, WATCHED_FOLDER)
             time.sleep(10)
     except KeyboardInterrupt:
         observer.stop()

@@ -1,8 +1,10 @@
 import os
 import hashlib
 import requests
-from constants import SERVER_URL, WATCHED_FOLDER
+from constants import SERVER_URL
 from messages import *
+
+WATCHED_FOLDER = None
 
 
 def get_file_hash(local_path):
@@ -162,7 +164,7 @@ def initialize(state):
         
         if not files:
             print(SERVER_EMPTY)
-            state['last_sync'] = '1970-01-01T00:00:00Z'
+            state['last_sync'] = None
             return state
 
         print(f' downloading {len(files)} files from server...')
@@ -176,7 +178,7 @@ def initialize(state):
             state['files'][file_path] = file_id
             state['versions'][str(file_id)] = file['current_version']
 
-        state['last_sync'] = files[-1].get('last_modified_time', '1970-01-01T00:00:00Z')
+        state['last_sync'] = files[-1].get('last_modified_time')
         print(INITALIZING_SUCCESS)
 
     return state
