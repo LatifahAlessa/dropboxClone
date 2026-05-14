@@ -13,6 +13,13 @@ def upload_file(user, path, name, file_data, client_version):
         return None, "conflict"
 
     file_hash = hashlib.md5(file_data).hexdigest()
+
+    latest_version = (
+        FileVersion.objects.content_versions(file_obj).order_by("-version_num").first()
+    )
+    if latest_version and latest_version.hash == file_hash:
+        return file_obj, "updated"
+
     new_version = file_obj.current_version + 1 if not created else 1
     storage_key = f"users/{user.id}/v{new_version}/{path.lstrip('/')}"
 
@@ -31,9 +38,7 @@ def upload_file(user, path, name, file_data, client_version):
     file_obj.name = name
     file_obj.save()
 
-    old_versions = FileVersion.objects.filter(file=file_obj).order_by("-version_num")[
-        5:
-    ]
+    old_versions = FileVersion.objects.for_file(file_obj)[5:]
 
     for version in old_versions:
         if version.storage_path:
@@ -46,7 +51,7 @@ def upload_file(user, path, name, file_data, client_version):
 # DELETE
 def delete_file(user, file_id):
     try:
-        file_obj = File.objects.get(id=file_id, user=user, is_deleted=False)
+        file_obj = File.objects.active_for_user(user).get(id=file_id)
     except File.DoesNotExist:
         return None, "not_found"
 
@@ -60,9 +65,7 @@ def delete_file(user, file_id):
         size=0,
     )
 
-    versions = FileVersion.objects.filter(
-        file=file_obj, operation_type__in=["CREATE", "MODIFY"]
-    )
+    versions = FileVersion.objects.content_versions(file_obj)
     for version in versions:
         if version.storage_path:
             trash_key = f"trash/{version.storage_path}"
@@ -76,16 +79,12 @@ def delete_file(user, file_id):
 # RENAME
 def rename_file(user, file_id, new_path, new_name):
     try:
-        file_obj = File.objects.get(id=file_id, user=user, is_deleted=False)
+        file_obj = File.objects.active_for_user(user).get(id=file_id)
     except File.DoesNotExist:
         return None, "not_found"
 
     latest_version = (
-        FileVersion.objects.filter(
-            file=file_obj, operation_type__in=["CREATE", "MODIFY"]
-        )
-        .order_by("-version_num")
-        .first()
+        FileVersion.objects.content_versions(file_obj).order_by("-version_num").first()
     )
 
     if latest_version and latest_version.storage_path:
@@ -113,24 +112,18 @@ def rename_file(user, file_id, new_path, new_name):
 # GET HISTORY
 def get_file_history(user, file_id):
     try:
-        file_obj = File.objects.get(id=file_id, user=user)
+        file_obj = File.objects.for_user(user).get(id=file_id)
     except File.DoesNotExist:
         return None, "not_found"
 
-    versions = FileVersion.objects.filter(file=file_obj).order_by("-version_num")
+    versions = FileVersion.objects.for_file(file_obj)
 
     return versions, "ok"
 
 
 # GET CHANGES
 def get_changes(user, since_timestamp):
-    versions = (
-        FileVersion.objects.filter(
-            file__user=user,
-        )
-        .select_related("file")
-        .order_by("created_at")
-    )
+    versions = FileVersion.objects.for_user(user)
     if since_timestamp:
         versions = versions.filter(created_at__gt=since_timestamp)
     return versions
@@ -139,24 +132,20 @@ def get_changes(user, since_timestamp):
 # DOWNLOAD
 def download_file(user, file_id, version_num=None):
     try:
-        file_obj = File.objects.get(id=file_id, user=user)
+        file_obj = File.objects.for_user(user).get(id=file_id)
     except File.DoesNotExist:
         return None, None, "not_found"
 
     if version_num:
         try:
-            version = FileVersion.objects.get(
-                file=file_obj,
-                version_num=version_num,
-                operation_type__in=["CREATE", "MODIFY"],
+            version = FileVersion.objects.content_versions(file_obj).get(
+                version_num=version_num
             )
         except FileVersion.DoesNotExist:
             return None, None, "version_not_found"
     else:
         version = (
-            FileVersion.objects.filter(
-                file=file_obj, operation_type__in=["CREATE", "MODIFY"]
-            )
+            FileVersion.objects.content_versions(file_obj)
             .order_by("-version_num")
             .first()
         )
@@ -169,14 +158,13 @@ def download_file(user, file_id, version_num=None):
 
 # GET ALL FILES
 def get_all_files(user):
-    files = File.objects.filter(user=user, is_deleted=False)
-    return files
+    return File.objects.active_for_user(user)
 
 
 # GET SINGLE FILE
 def get_file(user, file_id):
     try:
-        return File.objects.get(id=file_id, user=user, is_deleted=False)
+        return File.objects.active_for_user(user).get(id=file_id)
     except File.DoesNotExist:
         return None
 
@@ -184,13 +172,11 @@ def get_file(user, file_id):
 # RESTORE
 def restore_file(user, file_id):
     try:
-        file_obj = File.objects.get(id=file_id, user=user, is_deleted=True)
+        file_obj = File.objects.deleted_for_user(user).get(id=file_id)
     except File.DoesNotExist:
         return None, "not_found"
 
-    versions = FileVersion.objects.filter(
-        file=file_obj, operation_type__in=["CREATE", "MODIFY"]
-    )
+    versions = FileVersion.objects.content_versions(file_obj)
     for version in versions:
         if version.storage_path and version.storage_path.startswith("trash/"):
             original_key = version.storage_path.replace("trash/", "", 1)
