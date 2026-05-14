@@ -6,7 +6,7 @@ from .serializers import RegisterSerializer
 from .messages import USER_SUCCESS_MSG
 
 
-@api_view(['POST'])
+@api_view(["POST"])
 @permission_classes([AllowAny])
 def register(request):
     serializer = RegisterSerializer(data=request.data)
@@ -15,4 +15,4 @@ def register(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     serializer.save()
-    return Response({'message': USER_SUCCESS_MSG}, status=status.HTTP_201_CREATED)
+    return Response({"message": USER_SUCCESS_MSG}, status=status.HTTP_201_CREATED)

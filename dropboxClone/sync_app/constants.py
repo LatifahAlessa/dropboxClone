@@ -3,7 +3,7 @@ OPERATION_CHOICES = [
     ("MODIFY", "Modify"),
     ("DELETE", "Delete"),
     ("RENAME", "Rename"),
-    ('RESTORE', 'Restore'),
+    ("RESTORE", "Restore"),
 ]
 
-STORAGE_ROOT = 'file_storage'
+STORAGE_ROOT = "file_storage"
