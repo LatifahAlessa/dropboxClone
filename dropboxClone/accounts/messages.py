@@ -1,1 +1,1 @@
-USER_SUCCESS_MSG = 'user created successfully'
+USER_SUCCESS_MSG = "user created successfully"

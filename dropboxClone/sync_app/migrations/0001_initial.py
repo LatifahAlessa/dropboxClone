@@ -16,31 +16,76 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='File',
+            name="File",
             fields=[
-                ('id', models.UUIDField(default=sync_app.models.generate_uuid, editable=False, primary_key=True, serialize=False)),
-                ('path', models.CharField(max_length=500)),
-                ('name', models.CharField(max_length=255)),
-                ('is_deleted', models.BooleanField(default=False)),
-                ('current_version', models.IntegerField(default=1)),
-                ('last_modified_time', models.DateTimeField(auto_now=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='files', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=sync_app.models.generate_uuid,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("path", models.CharField(max_length=500)),
+                ("name", models.CharField(max_length=255)),
+                ("is_deleted", models.BooleanField(default=False)),
+                ("current_version", models.IntegerField(default=1)),
+                ("last_modified_time", models.DateTimeField(auto_now=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="files",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'unique_together': {('user', 'path')},
+                "unique_together": {("user", "path")},
             },
         ),
         migrations.CreateModel(
-            name='FileVersion',
+            name="FileVersion",
             fields=[
-                ('id', models.UUIDField(default=sync_app.models.generate_uuid, editable=False, primary_key=True, serialize=False)),
-                ('version_num', models.IntegerField()),
-                ('operation_type', models.CharField(choices=[('CREATE', 'Create'), ('MODIFY', 'Modify'), ('DELETE', 'Delete'), ('RENAME', 'Rename'), ('RESTORE', 'Restore')], max_length=20)),
-                ('hash', models.CharField(blank=True, max_length=128, null=True)),
-                ('size', models.BigIntegerField(default=0)),
-                ('storage_path', models.CharField(blank=True, max_length=500, null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('file', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='versions', to='sync_app.file')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=sync_app.models.generate_uuid,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("version_num", models.IntegerField()),
+                (
+                    "operation_type",
+                    models.CharField(
+                        choices=[
+                            ("CREATE", "Create"),
+                            ("MODIFY", "Modify"),
+                            ("DELETE", "Delete"),
+                            ("RENAME", "Rename"),
+                            ("RESTORE", "Restore"),
+                        ],
+                        max_length=20,
+                    ),
+                ),
+                ("hash", models.CharField(blank=True, max_length=128, null=True)),
+                ("size", models.BigIntegerField(default=0)),
+                (
+                    "storage_path",
+                    models.CharField(blank=True, max_length=500, null=True),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "file",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="versions",
+                        to="sync_app.file",
+                    ),
+                ),
             ],
         ),
     ]
