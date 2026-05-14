@@ -140,7 +140,7 @@ def download_file(user, file_id, version_num=None):
     try:
         file_obj = File.objects.get(id=file_id, user=user)
     except File.DoesNotExist:
-        return None, None, None, 'not_found'
+        return None, None, 'not_found'
 
     if version_num:
         try:
@@ -150,7 +150,7 @@ def download_file(user, file_id, version_num=None):
                 operation_type__in=['CREATE', 'MODIFY']
             )
         except FileVersion.DoesNotExist:
-            return None, None, None, 'version_not_found'
+            return None, None, 'version_not_found'
     else:
         version = FileVersion.objects.filter(
             file=file_obj,
@@ -158,11 +158,9 @@ def download_file(user, file_id, version_num=None):
         ).order_by('-version_num').first()
 
     if not version or not version.storage_path:
-        return None, None, None, 'file_not_found'
+        return None, None, 'file_not_found'
 
-    file_data = storage.download_from_storage(version.storage_path)
-
-    return file_obj, version, file_data, 'ok'
+    return storage.get_presigned_url(version.storage_path), version.hash, 'ok'
 
 
 # GET ALL FILES

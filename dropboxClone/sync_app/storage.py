@@ -11,6 +11,15 @@ s3 = boto3.client(
     region_name='us-east-1'
 )
 
+s3_public = boto3.client(
+    's3',
+    endpoint_url=settings.MINIO_PUBLIC_ENDPOINT,
+    aws_access_key_id=settings.MINIO_ACCESS_KEY,
+    aws_secret_access_key=settings.MINIO_SECRET_KEY,
+    config=Config(signature_version='s3v4'),
+    region_name='us-east-1'
+)
+
 def upload_to_storage(file_data, storage_key):
     s3.put_object(
         Bucket=settings.MINIO_BUCKET,
@@ -18,12 +27,12 @@ def upload_to_storage(file_data, storage_key):
         Body=file_data
     )
 
-def download_from_storage(storage_key):
-    response = s3.get_object(
-        Bucket=settings.MINIO_BUCKET,
-        Key=storage_key
+def get_presigned_url(storage_key):
+    return s3_public.generate_presigned_url(
+        'get_object',
+        Params={'Bucket': settings.MINIO_BUCKET, 'Key': storage_key},
+        ExpiresIn=settings.PRESIGNED_URL_EXPIRY
     )
-    return response['Body'].read()
 
 def delete_from_storage(storage_key):
     s3.delete_object(

@@ -113,14 +113,23 @@ def download_from_server(file_id, local_path, state, file_path):
     if not response:
         return
 
-    if response.status_code == 200:
-        os.makedirs(os.path.dirname(local_path), exist_ok=True)
-        with open(local_path, 'wb') as f:
-            f.write(response.content)
-        state.setdefault('hashes', {})[str(file_id)] = hashlib.md5(response.content).hexdigest()
-        print(f'{DOWNLOAD_SUCCESS}: {file_path}')
-    else:
+    if response.status_code != 200:
         print(f'{DOWNLOAD_FAILED}: {response.status_code}')
+        return
+
+    data = response.json()
+    file_response = requests.get(data['download_url'])
+
+    if file_response.status_code != 200:
+        print(f'{DOWNLOAD_FAILED}: {file_response.status_code}')
+        return
+
+    os.makedirs(os.path.dirname(local_path), exist_ok=True)
+    with open(local_path, 'wb') as f:
+        f.write(file_response.content)
+
+    state.setdefault('hashes', {})[str(file_id)] = data.get('hash', '')
+    print(f'{DOWNLOAD_SUCCESS}: {file_path}')
 
 
 def apply_change(change, state):
