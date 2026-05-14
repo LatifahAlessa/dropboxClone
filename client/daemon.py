@@ -12,13 +12,13 @@ from auth import authenticated_request, login, load_tokens
 
 def load_state():
     if os.path.exists(STATE_FILE):
-        with open(STATE_FILE, 'r') as f:
+        with open(STATE_FILE, "r") as f:
             return json.load(f)
-    return {'last_sync': None, 'files': {}, 'versions': {}, 'hashes': {}}
+    return {"last_sync": None, "files": {}, "versions": {}, "hashes": {}}
 
 
 def save_state(state):
-    with open(STATE_FILE, 'w') as f:
+    with open(STATE_FILE, "w") as f:
         json.dump(state, f)
 
 
@@ -45,7 +45,9 @@ class SyncHandler(FileSystemEventHandler):
         if self.should_ignore(event.src_path):
             return
         self.recently_created.add(event.src_path)
-        self.state, _ = client_services.upload_file(event.src_path, self.state, is_new=True)
+        self.state, _ = client_services.upload_file(
+            event.src_path, self.state, is_new=True
+        )
         save_state(self.state)
 
     def on_modified(self, event):
@@ -58,7 +60,9 @@ class SyncHandler(FileSystemEventHandler):
             return
         if self.should_ignore(event.src_path):
             return
-        self.state, _ = client_services.upload_file(event.src_path, self.state, is_new=False)
+        self.state, _ = client_services.upload_file(
+            event.src_path, self.state, is_new=False
+        )
         save_state(self.state)
 
     def on_deleted(self, event):
@@ -70,62 +74,65 @@ class SyncHandler(FileSystemEventHandler):
     def on_moved(self, event):
         if event.is_directory:
             return
-        self.state, _ = client_services.rename_file(event.src_path, event.dest_path, self.state)
+        self.state, _ = client_services.rename_file(
+            event.src_path, event.dest_path, self.state
+        )
         save_state(self.state)
 
 
 def fetch_changes(state, downloading, watched_folder):
-    since = state.get('last_sync')
-    params = f'?since={since}' if since else ''
-    response = authenticated_request('GET', f'{SERVER_URL}/sync/changes{params}')
+    since = state.get("last_sync")
+    params = f"?since={since}" if since else ""
+    response = authenticated_request("GET", f"{SERVER_URL}/sync/changes{params}")
 
     if not response:
         return
 
-
     if response.status_code == 200:
         data = response.json()
-        changes = data.get('changes', [])
+        changes = data.get("changes", [])
 
         if changes:
-            print(f'{len(changes)} {FETCH_CHANGES}')
+            print(f"{len(changes)} {FETCH_CHANGES}")
             for change in changes:
-                local_path = os.path.join(watched_folder, change['file_path'].lstrip('/'))
+                local_path = os.path.join(
+                    watched_folder, change["file_path"].lstrip("/")
+                )
                 downloading.add(local_path)
                 state = client_services.apply_change(change, state)
                 downloading.discard(local_path)
-            state['last_sync'] = data['last_sync']
+            state["last_sync"] = data["last_sync"]
             save_state(state)
 
 
 def is_new_client(state):
-    return not state['files'] and state['last_sync'] is None
+    return not state["files"] and state["last_sync"] is None
 
 
 def authenticate():
     tokens = load_tokens()
     if tokens:
-        print('using saved credentials.')
+        print("using saved credentials.")
         return True
 
-    print('--- login ---')
-    username = input('username: ')
-    password = input('password: ')
+    print("--- login ---")
+    username = input("username: ")
+    password = input("password: ")
 
     tokens = login(username, password)
     if not tokens:
-        print('login failed.')
+        print("login failed.")
         return False
 
-    print('login successful.')
+    print("login successful.")
     return True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print('usage: python daemon.py <folder_to_watch>')
+        print("usage: python daemon.py <folder_to_watch>")
         exit(1)
-        
+
     if not authenticate():
         exit(1)
 
@@ -143,7 +150,7 @@ if __name__ == '__main__':
     observer = Observer()
     observer.schedule(handler, WATCHED_FOLDER, recursive=True)
     observer.start()
-    print(f'{WATCHING}: {WATCHED_FOLDER}')
+    print(f"{WATCHING}: {WATCHED_FOLDER}")
 
     try:
         while True:

@@ -2,6 +2,6 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from uuid_extensions import uuid7
 
-    
+
 class CustomUser(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
