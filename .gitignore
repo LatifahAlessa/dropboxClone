@@ -40,6 +40,8 @@ synced_folder_2/
 # Client state (runtime data)
 client/sync_state.json
 client2/sync_state.json
+client/tokens.json
+client2/tokens.json
 
 # Coverage
 htmlcov/

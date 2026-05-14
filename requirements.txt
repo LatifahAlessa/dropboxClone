@@ -1,30 +1,20 @@
+altgraph @ file:///AppleInternal/Library/BuildRoots/39d9dc1a-2111-11f0-be06-226177e5bb69/Library/Caches/com.apple.xbs/Sources/python3/altgraph-0.17.2-py2.py3-none-any.whl
 asgiref==3.11.1
-attrs==26.1.0
 boto3==1.42.97
 botocore==1.42.97
-certifi==2026.4.22
-charset-normalizer==3.4.7
 Django==4.2.30
-django-filter==25.1
+django-storages==1.14.6
 djangorestframework==3.16.1
-drf-spectacular==0.29.0
-idna==3.13
-inflection==0.5.1
+djangorestframework-simplejwt==5.5.1
+djangorestframework_simplejwt==5.5.1
+future @ file:///AppleInternal/Library/BuildRoots/39d9dc1a-2111-11f0-be06-226177e5bb69/Library/Caches/com.apple.xbs/Sources/python3/future-0.18.2-py3-none-any.whl
 jmespath==1.1.0
-jsonschema==4.25.1
-jsonschema-specifications==2025.9.1
-psycopg2-binary==2.9.12
+macholib @ file:///AppleInternal/Library/BuildRoots/39d9dc1a-2111-11f0-be06-226177e5bb69/Library/Caches/com.apple.xbs/Sources/python3/macholib-1.15.2-py2.py3-none-any.whl
+PyJWT==2.12.1
 python-dateutil==2.9.0.post0
-python-dotenv==1.2.1
-PyYAML==6.0.3
-referencing==0.36.2
-requests==2.32.5
-rpds-py==0.27.1
 s3transfer==0.16.1
-six==1.17.0
+six @ file:///AppleInternal/Library/BuildRoots/39d9dc1a-2111-11f0-be06-226177e5bb69/Library/Caches/com.apple.xbs/Sources/python3/six-1.15.0-py2.py3-none-any.whl
 sqlparse==0.5.5
 typing_extensions==4.15.0
-uritemplate==4.2.0
 urllib3==1.26.20
-watchdog==6.0.0
 uuid7==0.1.0

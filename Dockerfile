@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
+COPY dropboxClone/requirements.txt .
 RUN pip install -r requirements.txt
 
 COPY dropboxClone/ .

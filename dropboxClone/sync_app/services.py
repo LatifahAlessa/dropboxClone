@@ -4,8 +4,9 @@ from . import storage
 
 
 # UPLOAD
-def upload_file(path, name, file_data, client_version):
+def upload_file(user, path, name, file_data, client_version):
     file_obj, created = File.objects.get_or_create(
+        user=user,
         path=path,
         defaults={'name': name}
     )
@@ -15,7 +16,7 @@ def upload_file(path, name, file_data, client_version):
 
     file_hash = hashlib.md5(file_data).hexdigest()
     new_version = file_obj.current_version + 1 if not created else 1
-    storage_key = f"v{new_version}/{path.lstrip('/')}"
+    storage_key = f"users/{user.id}/v{new_version}/{path.lstrip('/')}"
 
     storage.upload_to_storage(file_data, storage_key)
 
@@ -45,9 +46,9 @@ def upload_file(path, name, file_data, client_version):
 
 
 # DELETE
-def delete_file(file_id):
+def delete_file(user, file_id):
     try:
-        file_obj = File.objects.get(id=file_id, is_deleted=False)
+        file_obj = File.objects.get(id=file_id, user=user, is_deleted=False)
     except File.DoesNotExist:
         return None, 'not_found'
 
@@ -76,9 +77,9 @@ def delete_file(file_id):
 
 
 # RENAME
-def rename_file(file_id, new_path, new_name):
+def rename_file(user, file_id, new_path, new_name):
     try:
-        file_obj = File.objects.get(id=file_id, is_deleted=False)
+        file_obj = File.objects.get(id=file_id, user=user, is_deleted=False)
     except File.DoesNotExist:
         return None, 'not_found'
 
@@ -111,9 +112,9 @@ def rename_file(file_id, new_path, new_name):
 
 
 # GET HISTORY
-def get_file_history(file_id):
+def get_file_history(user, file_id):
     try:
-        file_obj = File.objects.get(id=file_id)
+        file_obj = File.objects.get(id=file_id, user=user)
     except File.DoesNotExist:
         return None, 'not_found'
 
@@ -125,17 +126,19 @@ def get_file_history(file_id):
 
 
 # GET CHANGES
-def get_changes(since_timestamp):
-    versions = FileVersion.objects.select_related('file').order_by('created_at')
+def get_changes(user, since_timestamp):
+    versions = FileVersion.objects.filter(
+        file__user=user,
+    ).select_related('file').order_by('created_at')
     if since_timestamp:
         versions = versions.filter(created_at__gt=since_timestamp)
     return versions
 
 
 # DOWNLOAD
-def download_file(file_id, version_num=None):
+def download_file(user, file_id, version_num=None):
     try:
-        file_obj = File.objects.get(id=file_id)
+        file_obj = File.objects.get(id=file_id, user=user)
     except File.DoesNotExist:
         return None, None, None, 'not_found'
 
@@ -163,23 +166,23 @@ def download_file(file_id, version_num=None):
 
 
 # GET ALL FILES
-def get_all_files():
-    files = File.objects.filter(is_deleted=False)
+def get_all_files(user):
+    files = File.objects.filter(user=user, is_deleted=False)
     return files
 
 
 # GET SINGLE FILE
-def get_file(file_id):
+def get_file(user, file_id):
     try:
-        return File.objects.get(id=file_id, is_deleted=False)
+        return File.objects.get(id=file_id, user=user, is_deleted=False)
     except File.DoesNotExist:
         return None
 
 
 # RESTORE
-def restore_file(file_id):
+def restore_file(user, file_id):
     try:
-        file_obj = File.objects.get(id=file_id, is_deleted=True)
+        file_obj = File.objects.get(id=file_id, user=user, is_deleted=True)
     except File.DoesNotExist:
         return None, 'not_found'
 
