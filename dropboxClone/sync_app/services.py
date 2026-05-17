@@ -1,16 +1,23 @@
 from .models import File, FileVersion
 import hashlib
+from django.db.models import QuerySet
 from . import storage
+from .exceptions import (
+    FileNotFoundException,
+    VersionNotFoundException,
+    FileContentNotFoundException,
+    ConflictException,
+)
 
 
 # UPLOAD
-def upload_file(user, path, name, file_data, client_version):
+def upload_file(user, path, name, file_data, client_version) -> File:
     file_obj, created = File.objects.get_or_create(
         user=user, path=path, defaults={"name": name}
     )
 
     if not created and client_version != file_obj.current_version:
-        return None, "conflict"
+        raise ConflictException()
 
     file_hash = hashlib.md5(file_data).hexdigest()
 
@@ -18,7 +25,7 @@ def upload_file(user, path, name, file_data, client_version):
         FileVersion.objects.content_versions(file_obj).order_by("-version_num").first()
     )
     if latest_version and latest_version.hash == file_hash:
-        return file_obj, "updated"
+        return file_obj
 
     new_version = file_obj.current_version + 1 if not created else 1
     storage_key = f"users/{user.id}/v{new_version}/{path.lstrip('/')}"
@@ -45,15 +52,15 @@ def upload_file(user, path, name, file_data, client_version):
             storage.delete_from_storage(version.storage_path)
         version.delete()
 
-    return file_obj, "created" if created else "updated"
+    return file_obj
 
 
 # DELETE
-def delete_file(user, file_id):
+def delete_file(user, file_id) -> File:
     try:
         file_obj = File.objects.active_for_user(user).get(id=file_id)
     except File.DoesNotExist:
-        return None, "not_found"
+        raise FileNotFoundException()
 
     file_obj.is_deleted = True
     file_obj.save()
@@ -73,15 +80,15 @@ def delete_file(user, file_id):
             version.storage_path = trash_key
             version.save()
 
-    return file_obj, "deleted"
+    return file_obj
 
 
 # RENAME
-def rename_file(user, file_id, new_path, new_name):
+def rename_file(user, file_id, new_path, new_name) -> File:
     try:
         file_obj = File.objects.active_for_user(user).get(id=file_id)
     except File.DoesNotExist:
-        return None, "not_found"
+        raise FileNotFoundException()
 
     latest_version = (
         FileVersion.objects.content_versions(file_obj).order_by("-version_num").first()
@@ -106,23 +113,21 @@ def rename_file(user, file_id, new_path, new_name):
     file_obj.name = new_name
     file_obj.save()
 
-    return file_obj, "renamed"
+    return file_obj
 
 
 # GET HISTORY
-def get_file_history(user, file_id):
+def get_file_history(user, file_id) -> QuerySet:
     try:
         file_obj = File.objects.for_user(user).get(id=file_id)
     except File.DoesNotExist:
-        return None, "not_found"
+        raise FileNotFoundException()
 
-    versions = FileVersion.objects.for_file(file_obj)
-
-    return versions, "ok"
+    return FileVersion.objects.for_file(file_obj)
 
 
 # GET CHANGES
-def get_changes(user, since_timestamp):
+def get_changes(user, since_timestamp) -> QuerySet:
     versions = FileVersion.objects.for_user(user)
     if since_timestamp:
         versions = versions.filter(created_at__gt=since_timestamp)
@@ -130,11 +135,11 @@ def get_changes(user, since_timestamp):
 
 
 # DOWNLOAD
-def download_file(user, file_id, version_num=None):
+def download_file(user, file_id, version_num=None) -> tuple[str, str]:
     try:
         file_obj = File.objects.for_user(user).get(id=file_id)
     except File.DoesNotExist:
-        return None, None, "not_found"
+        raise FileNotFoundException()
 
     if version_num:
         try:
@@ -142,7 +147,7 @@ def download_file(user, file_id, version_num=None):
                 version_num=version_num
             )
         except FileVersion.DoesNotExist:
-            return None, None, "version_not_found"
+            raise VersionNotFoundException()
     else:
         version = (
             FileVersion.objects.content_versions(file_obj)
@@ -150,31 +155,31 @@ def download_file(user, file_id, version_num=None):
             .first()
         )
 
-    if not version or not version.storage_path:
-        return None, None, "file_not_found"
+        if not version or not version.storage_path:
+            raise FileContentNotFoundException()
 
-    return storage.get_presigned_url(version.storage_path), version.hash, "ok"
+    return storage.get_presigned_url(version.storage_path), version.hash
 
 
 # GET ALL FILES
-def get_all_files(user):
+def get_all_files(user) -> QuerySet:
     return File.objects.active_for_user(user)
 
 
 # GET SINGLE FILE
-def get_file(user, file_id):
+def get_file(user, file_id) -> File:
     try:
         return File.objects.active_for_user(user).get(id=file_id)
     except File.DoesNotExist:
-        return None
+        raise FileNotFoundException()
 
 
 # RESTORE
-def restore_file(user, file_id):
+def restore_file(user, file_id) -> File:
     try:
         file_obj = File.objects.deleted_for_user(user).get(id=file_id)
     except File.DoesNotExist:
-        return None, "not_found"
+        raise FileNotFoundException()
 
     versions = FileVersion.objects.content_versions(file_obj)
     for version in versions:
@@ -194,4 +199,4 @@ def restore_file(user, file_id):
         size=0,
     )
 
-    return file_obj, "restored"
+    return file_obj
