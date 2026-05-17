@@ -23,7 +23,7 @@ class AuthenticatedTestCase(TestCase):
 
 class UploadFileTestCase(AuthenticatedTestCase):
 
-    @patch("sync_app.storage.upload_to_minio")
+    @patch("sync_app.storage.upload_to_storage")
     def test_upload_new_file(self, mock_upload):
         file = SimpleUploadedFile("test.txt", b"hello world", content_type="text/plain")
         response = self.client.post(
@@ -37,7 +37,7 @@ class UploadFileTestCase(AuthenticatedTestCase):
         self.assertEqual(response.data["current_version"], 1)
         mock_upload.assert_called_once()
 
-    @patch("sync_app.storage.upload_to_minio")
+    @patch("sync_app.storage.upload_to_storage")
     def test_upload_creates_file_version(self, mock_upload):
         file = SimpleUploadedFile("test.txt", b"hello world", content_type="text/plain")
         self.client.post(
@@ -52,7 +52,7 @@ class UploadFileTestCase(AuthenticatedTestCase):
         self.assertEqual(version.version_num, 1)
         self.assertGreater(version.size, 0)
 
-    @patch("sync_app.storage.upload_to_minio")
+    @patch("sync_app.storage.upload_to_storage")
     def test_upload_modify_existing_file(self, mock_upload):
         file_obj = File.objects.create(
             user=self.user, path="/desktop/test.txt", name="test.txt", current_version=1
@@ -83,7 +83,7 @@ class UploadFileTestCase(AuthenticatedTestCase):
         self.assertEqual(version.operation_type, "MODIFY")
         self.assertEqual(version.version_num, 2)
 
-    @patch("sync_app.storage.upload_to_minio")
+    @patch("sync_app.storage.upload_to_storage")
     def test_upload_conflict(self, mock_upload):
         File.objects.create(
             user=self.user, path="/desktop/test.txt", name="test.txt", current_version=2
@@ -112,8 +112,8 @@ class UploadFileTestCase(AuthenticatedTestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @patch("sync_app.storage.delete_from_minio")
-    @patch("sync_app.storage.upload_to_minio")
+    @patch("sync_app.storage.delete_from_storage")
+    @patch("sync_app.storage.upload_to_storage")
     def test_upload_prunes_old_versions(self, mock_upload, mock_delete):
         file_obj = File.objects.create(
             user=self.user, path="/desktop/test.txt", name="test.txt", current_version=5
@@ -216,7 +216,7 @@ class RenameFileTestCase(AuthenticatedTestCase):
             user=self.user, path="/desktop/test.txt", name="test.txt", current_version=1
         )
 
-    @patch("sync_app.storage.rename_in_minio")
+    @patch("sync_app.storage.rename_in_storage")
     def test_rename_file(self, mock_rename):
         FileVersion.objects.create(
             file=self.file,
@@ -235,7 +235,7 @@ class RenameFileTestCase(AuthenticatedTestCase):
         self.assertEqual(self.file.name, "renamed.txt")
         self.assertEqual(self.file.path, "/desktop/renamed.txt")
 
-    @patch("sync_app.storage.rename_in_minio")
+    @patch("sync_app.storage.rename_in_storage")
     def test_rename_updates_storage_path(self, mock_rename):
         FileVersion.objects.create(
             file=self.file,
@@ -251,7 +251,7 @@ class RenameFileTestCase(AuthenticatedTestCase):
         )
         mock_rename.assert_called_once()
 
-    @patch("sync_app.storage.rename_in_minio")
+    @patch("sync_app.storage.rename_in_storage")
     def test_rename_creates_version(self, mock_rename):
         self.client.patch(
             f"/api/files/{self.file.id}/",
@@ -327,23 +327,23 @@ class DownloadFileTestCase(AuthenticatedTestCase):
             storage_path="users/1/v1/desktop/test.txt",
         )
 
-    @patch("sync_app.storage.download_from_minio")
-    def test_download_latest_version(self, mock_download):
-        mock_download.return_value = b"hello world"
+    @patch("sync_app.storage.get_presigned_url")
+    def test_download_latest_version(self, mock_presigned):
+        mock_presigned.return_value = "http://minio:9000/signed-url"
         response = self.client.get(f"/api/files/{self.file.id}/download/")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.content, b"hello world")
-        self.assertIn("attachment", response["Content-Disposition"])
+        self.assertEqual(response.data["download_url"], "http://minio:9000/signed-url")
+        self.assertEqual(response.data["hash"], "abc123")
 
-    @patch("sync_app.storage.download_from_minio")
-    def test_download_specific_version(self, mock_download):
-        mock_download.return_value = b"hello world"
+    @patch("sync_app.storage.get_presigned_url")
+    def test_download_specific_version(self, mock_presigned):
+        mock_presigned.return_value = "http://minio:9000/signed-url"
         response = self.client.get(f"/api/files/{self.file.id}/download/?version=1")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.content, b"hello world")
+        self.assertEqual(response.data["download_url"], "http://minio:9000/signed-url")
 
-    @patch("sync_app.storage.download_from_minio")
-    def test_download_older_version(self, mock_download):
+    @patch("sync_app.storage.get_presigned_url")
+    def test_download_older_version(self, mock_presigned):
         FileVersion.objects.create(
             file=self.file,
             version_num=2,
@@ -355,10 +355,10 @@ class DownloadFileTestCase(AuthenticatedTestCase):
         self.file.current_version = 2
         self.file.save()
 
-        mock_download.return_value = b"hello world"
+        mock_presigned.return_value = "http://minio:9000/signed-url"
         response = self.client.get(f"/api/files/{self.file.id}/download/?version=1")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        mock_download.assert_called_once_with("users/1/v1/desktop/test.txt")
+        mock_presigned.assert_called_once_with("users/1/v1/desktop/test.txt")
 
     def test_download_not_found(self):
         fake_id = uuid.uuid4()
