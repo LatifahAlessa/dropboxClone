@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
 import sync_app.models
+from uuid_extensions import uuid7
 
 
 class Migration(migrations.Migration):
@@ -21,7 +22,7 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=sync_app.models.generate_uuid,
+                        default=uuid7,
                         editable=False,
                         primary_key=True,
                         serialize=False,
@@ -51,7 +52,7 @@ class Migration(migrations.Migration):
                 (
                     "id",
                     models.UUIDField(
-                        default=sync_app.models.generate_uuid,
+                        default=uuid7,
                         editable=False,
                         primary_key=True,
                         serialize=False,
