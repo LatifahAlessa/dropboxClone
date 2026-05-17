@@ -4,12 +4,8 @@ from .constants import OPERATION_CHOICES
 from uuid_extensions import uuid7
 
 
-def generate_uuid():
-    return uuid7()
-
-
 class File(models.Model):
-    id = models.UUIDField(primary_key=True, default=generate_uuid, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="files"
     )
@@ -27,7 +23,7 @@ class File(models.Model):
 
 
 class FileVersion(models.Model):
-    id = models.UUIDField(primary_key=True, default=generate_uuid, editable=False)
+    id = models.UUIDField(primary_key=True, default=uuid7, editable=False)
     file = models.ForeignKey("File", on_delete=models.CASCADE, related_name="versions")
     version_num = models.IntegerField()
     operation_type = models.CharField(max_length=20, choices=OPERATION_CHOICES)
