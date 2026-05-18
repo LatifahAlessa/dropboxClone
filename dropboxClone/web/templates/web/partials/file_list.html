@@ -1,0 +1,48 @@
+{% if files %}
+    {% for file in files %}
+    <div class="file-row" id="file-{{ file.id }}">
+        <span class="file-name"
+            contenteditable="true"
+            data-original="{{ file.name }}"
+            onblur="handleRename(this, '{% url 'rename' file.id %}')"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+        >{{ file.name }}</span>
+        <div class="file-actions">
+            <a href="{% url 'history' file.id %}" class="btn btn-secondary" title="History"><i class="fa fa-clock-rotate-left"></i></a>
+            <a href="{% url 'download' file.id %}" class="btn btn-secondary" title="Download"><i class="fa fa-download"></i></a>
+            <button
+                class="btn btn-danger"
+                hx-post="{% url 'delete' file.id %}"
+                hx-target="#file-list"
+                hx-confirm="Delete {{ file.name }}?"
+                title="Delete"
+            ><i class="fa fa-trash"></i></button>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <p class="empty-state">No files yet. Upload one above.</p>
+{% endif %}
+
+<script>
+function handleRename(el, url) {
+    var newName = el.textContent.trim();
+    var original = el.dataset.original;
+    if (!newName || newName === original) {
+        el.textContent = original;
+        return;
+    }
+    var csrfToken = document.querySelector("[name=csrfmiddlewaretoken]");
+    var formData = new FormData();
+    formData.append("new_name", newName);
+    fetch(url, {
+        method: "POST",
+        headers: {"X-CSRFToken": csrfToken.value},
+        body: formData
+    }).then(function(response) {
+        return response.text();
+    }).then(function(html) {
+        document.getElementById("file-list").innerHTML = html;
+    });
+}
+</script>

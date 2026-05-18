@@ -1,0 +1,69 @@
+{% extends "web/base.html" %}
+{% block title %}My Files{% endblock %}
+{% block content %}
+{% csrf_token %}
+<div class="header">
+    <h1>{{ request.user.username }}'s Files</h1>
+    <div class="header-actions">
+        <a href="{% url 'trash' %}" class="btn btn-secondary" title="Trash"><i class="fa fa-trash"></i></a>
+        <a href="{% url 'logout' %}" class="btn btn-secondary">Logout</a>
+    </div>
+</div>
+
+<div class="drop-zone" id="drop-zone">
+    <i class="fa fa-cloud-upload-alt"></i>
+    <p>Drag & drop files here or</p>
+    <label class="btn btn-primary upload-btn">
+        Browse
+        <input type="file" name="file" id="file-input" hidden multiple>
+    </label>
+</div>
+
+<div class="card">
+    <div id="file-list">
+        {% include "web/partials/file_list.html" %}
+    </div>
+</div>
+
+<script>
+var dropZone = document.getElementById("drop-zone");
+var fileInput = document.getElementById("file-input");
+var csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+
+dropZone.addEventListener("dragover", function(e) {
+    e.preventDefault();
+    dropZone.classList.add("drop-zone--active");
+});
+
+dropZone.addEventListener("dragleave", function() {
+    dropZone.classList.remove("drop-zone--active");
+});
+
+dropZone.addEventListener("drop", function(e) {
+    e.preventDefault();
+    dropZone.classList.remove("drop-zone--active");
+    uploadFiles(e.dataTransfer.files);
+});
+
+fileInput.addEventListener("change", function() {
+    uploadFiles(fileInput.files);
+    fileInput.value = "";
+});
+
+function uploadFiles(files) {
+    Array.from(files).forEach(function(file) {
+        var formData = new FormData();
+        formData.append("file", file);
+        fetch("{% url 'upload' %}", {
+            method: "POST",
+            headers: {"X-CSRFToken": csrfToken},
+            body: formData
+        }).then(function(response) {
+            return response.text();
+        }).then(function(html) {
+            document.getElementById("file-list").innerHTML = html;
+        });
+    });
+}
+</script>
+{% endblock %}

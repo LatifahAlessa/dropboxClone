@@ -1,0 +1,249 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background: #f5f5f5;
+  color: #333;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  flex: 1;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  width: 100%;
+}
+
+.card {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.auth-card {
+  max-width: 360px;
+  margin: 6rem auto 0;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+}
+
+.auth-title {
+  font-size: 1.4rem;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+.auth-card p {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  font-size: 1.5rem;
+}
+
+
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-full {
+  width: 100%;
+  border-radius: 50px;
+  padding: 0.65rem 1rem;
+  font-size: 1rem;
+}
+
+.btn-primary {
+  background: #0061fe;
+  color: white;
+}
+
+.btn-danger {
+  background: #d32f2f;
+  color: white;
+}
+
+.btn-secondary {
+  background: #e0e0e0;
+  color: #333;
+}
+
+
+input[type="text"],
+input[type="password"],
+input[type="email"] {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+
+.upload-btn {
+  cursor: pointer;
+}
+
+.drop-zone {
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.drop-zone i {
+  font-size: 2rem;
+  color: #999;
+  margin-bottom: 0.5rem;
+}
+
+.drop-zone p {
+  color: #666;
+  margin-bottom: 0.75rem;
+}
+
+.drop-zone--active {
+  border-color: #0061fe;
+  background: #e8f0fe;
+}
+
+
+.file-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #eee;
+  flex-wrap: wrap;
+}
+
+.file-row:last-child {
+  border-bottom: none;
+}
+
+.file-name {
+  font-weight: 500;
+  cursor: text;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  outline: none;
+}
+
+.file-name:focus {
+  background: #e8f0fe;
+  border: 1px solid #0061fe;
+}
+
+.file-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.empty-state {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+}
+
+.error {
+  color: red;
+  margin-bottom: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.version-info {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.version-label {
+  font-weight: 600;
+  color: #0061fe;
+}
+
+.version-type {
+  background: #e8f0fe;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  text-transform: lowercase;
+}
+
+.version-date {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  padding: 1.25rem 2rem;
+  background: white;
+  border-bottom: 1px solid #eee;
+}
+
+.site-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: #333;
+  text-decoration: none;
+}
+
+.logo-icon {
+  width: 42px;
+  height: 42px;
+  background: #0061fe;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1.3rem;
+}
+
+.site-footer {
+  border-top: 1px solid #eee;
+  background: rgb(0, 0, 0);
+  height: 52px;
+  margin-top: 4rem;
+}

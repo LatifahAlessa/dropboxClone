@@ -1,0 +1,17 @@
+{% if files %}
+    {% for file in files %}
+    <div class="file-row">
+        <span class="file-name" style="cursor:default;">{{ file.name }}</span>
+        <div class="file-actions">
+            <button
+                class="btn btn-primary"
+                hx-post="{% url 'restore' file.id %}"
+                hx-target="#trash-list"
+                title="Restore"
+            ><i class="fa fa-undo"></i> Restore</button>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <p class="empty-state">Trash is empty.</p>
+{% endif %}

@@ -1,0 +1,15 @@
+{% extends "web/base.html" %}
+{% block title %}Trash{% endblock %}
+{% block content %}
+{% csrf_token %}
+<div class="header">
+    <h1><i class="fa fa-trash"></i> Trash</h1>
+    <a href="{% url 'files' %}" class="btn btn-secondary">Back to Files</a>
+</div>
+
+<div class="card">
+    <div id="trash-list">
+        {% include "web/partials/trash_list.html" %}
+    </div>
+</div>
+{% endblock %}
