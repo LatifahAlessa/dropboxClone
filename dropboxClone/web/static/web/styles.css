@@ -139,7 +139,6 @@ input[type="email"] {
   background: #e8f0fe;
 }
 
-
 .file-row {
   display: flex;
   justify-content: space-between;
@@ -151,6 +150,37 @@ input[type="email"] {
 
 .file-row:last-child {
   border-bottom: none;
+}
+
+.file-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.file-info i {
+  color: #666;
+}
+
+.folder-row .folder-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  color: #333;
+}
+
+.folder-row .folder-link i {
+  color: #f5a623;
+  font-size: 1.1rem;
+}
+
+.folder-row .folder-link:hover .folder-name {
+  color: #0061fe;
+}
+
+.folder-name {
+  font-weight: 500;
 }
 
 .file-name {
@@ -169,6 +199,46 @@ input[type="email"] {
 .file-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+.breadcrumbs a {
+  color: #0061fe;
+  text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb-sep {
+  color: #999;
+}
+
+.folder-actions {
+  margin-top: 0.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.new-folder-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.new-folder-form input[type="text"] {
+  margin-bottom: 0;
+  max-width: 220px;
 }
 
 .empty-state {

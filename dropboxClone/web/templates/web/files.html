@@ -5,10 +5,20 @@
 <div class="header">
     <h1>{{ request.user.username }}'s Files</h1>
     <div class="header-actions">
-        <a href="{% url 'trash' %}" class="btn btn-secondary" title="Trash"><i class="fa fa-trash"></i></a>
+        <a href="{% url 'trash' %}" class="btn btn-secondary" title="Trash"><i class="fa fa-trash"></i> Recently deleted</a>
         <a href="{% url 'logout' %}" class="btn btn-secondary">Logout</a>
     </div>
 </div>
+
+<nav class="breadcrumbs">
+    {% if breadcrumbs %}
+    <a href="{% url 'files' %}"><i class="fa fa-home"></i></a>
+    {% for crumb in breadcrumbs %}
+        <span class="breadcrumb-sep">/</span>
+        <a href="/folder/{{ crumb.path }}/">{{ crumb.name }}</a>
+    {% endfor %}
+    {% endif %}
+</nav>
 
 <div class="drop-zone" id="drop-zone">
     <i class="fa fa-cloud-upload-alt"></i>
@@ -17,6 +27,15 @@
         Browse
         <input type="file" name="file" id="file-input" hidden multiple>
     </label>
+</div>
+
+<div class="folder-actions">
+    <button class="btn btn-secondary" id="new-folder-btn"><i class="fa fa-folder-plus"></i> New Folder</button>
+    <div class="new-folder-form" id="new-folder-form" style="display:none;">
+        <input type="text" id="folder-name-input" placeholder="Folder name">
+        <button class="btn btn-primary" id="folder-name-submit">Create</button>
+        <button class="btn btn-secondary" id="folder-name-cancel">Cancel</button>
+    </div>
 </div>
 
 <div class="card">
@@ -29,6 +48,7 @@
 var dropZone = document.getElementById("drop-zone");
 var fileInput = document.getElementById("file-input");
 var csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+var currentPath = "{{ current_path }}";
 
 dropZone.addEventListener("dragover", function(e) {
     e.preventDefault();
@@ -51,9 +71,11 @@ fileInput.addEventListener("change", function() {
 });
 
 function uploadFiles(files) {
+    var remaining = files.length;
     Array.from(files).forEach(function(file) {
         var formData = new FormData();
         formData.append("file", file);
+        formData.append("current_path", currentPath);
         fetch("{% url 'upload' %}", {
             method: "POST",
             headers: {"X-CSRFToken": csrfToken},
@@ -61,8 +83,62 @@ function uploadFiles(files) {
         }).then(function(response) {
             return response.text();
         }).then(function(html) {
-            document.getElementById("file-list").innerHTML = html;
+            remaining--;
+            if (remaining === 0) {
+                document.getElementById("file-list").innerHTML = html;
+            }
         });
+    });
+}
+
+var newFolderBtn = document.getElementById("new-folder-btn");
+var newFolderForm = document.getElementById("new-folder-form");
+var folderNameInput = document.getElementById("folder-name-input");
+var folderNameSubmit = document.getElementById("folder-name-submit");
+var folderNameCancel = document.getElementById("folder-name-cancel");
+
+newFolderBtn.addEventListener("click", function() {
+    newFolderForm.style.display = "flex";
+    newFolderBtn.style.display = "none";
+    folderNameInput.focus();
+});
+
+folderNameCancel.addEventListener("click", function() {
+    newFolderForm.style.display = "none";
+    newFolderBtn.style.display = "inline-block";
+    folderNameInput.value = "";
+});
+
+folderNameInput.addEventListener("keydown", function(e) {
+    if (e.key === "Enter") {
+        e.preventDefault();
+        submitNewFolder();
+    }
+    if (e.key === "Escape") {
+        folderNameCancel.click();
+    }
+});
+
+folderNameSubmit.addEventListener("click", submitNewFolder);
+
+function submitNewFolder() {
+    var name = folderNameInput.value.trim();
+    if (!name) return;
+
+    var formData = new FormData();
+    formData.append("folder_name", name);
+    formData.append("current_path", currentPath);
+    fetch("{% url 'create_folder' %}", {
+        method: "POST",
+        headers: {"X-CSRFToken": csrfToken},
+        body: formData
+    }).then(function(response) {
+        return response.text();
+    }).then(function(html) {
+        document.getElementById("file-list").innerHTML = html;
+        folderNameInput.value = "";
+        newFolderForm.style.display = "none";
+        newFolderBtn.style.display = "inline-block";
     });
 }
 </script>

@@ -37,10 +37,47 @@ def logout_view(request):
     return redirect("login")
 
 
+def _get_folder_context(user, current_path):
+    current_path = current_path.strip("/")
+    all_files = services.get_all_files(user)
+
+    prefix = f"/{current_path}/" if current_path else "/"
+
+    files_here = []
+    subfolder_names = set()
+
+    for f in all_files:
+        if not f.path.startswith(prefix):
+            continue
+
+        relative = f.path[len(prefix):]
+
+        if "/" in relative:
+            subfolder_names.add(relative.split("/")[0])
+        else:
+            files_here.append(f)
+
+    breadcrumbs = []
+    if current_path:
+        parts = current_path.split("/")
+        for i, part in enumerate(parts):
+            breadcrumbs.append({
+                "name": part,
+                "path": "/".join(parts[: i + 1]),
+            })
+
+    return {
+        "files": files_here,
+        "subfolders": sorted(subfolder_names),
+        "current_path": current_path,
+        "breadcrumbs": breadcrumbs,
+    }
+
+
 @login_required(login_url="/login/")
-def files_view(request):
-    files = services.get_all_files(request.user)
-    return render(request, "web/files.html", {"files": files})
+def files_view(request, folder_path=""):
+    context = _get_folder_context(request.user, folder_path)
+    return render(request, "web/files.html", context)
 
 
 @login_required(login_url="/login/")
@@ -52,7 +89,13 @@ def upload_view(request):
     if not file:
         return redirect("files")
 
-    path = f"/{file.name}"
+    current_path = request.POST.get("current_path", "").strip()
+
+    if current_path:
+        path = f"/{current_path}/{file.name}"
+    else:
+        path = f"/{file.name}"
+
     try:
         services.upload_file(
             user=request.user,
@@ -64,8 +107,39 @@ def upload_view(request):
     except ConflictException:
         pass
 
-    files = services.get_all_files(request.user)
-    return render(request, "web/partials/file_list.html", {"files": files})
+    context = _get_folder_context(request.user, current_path)
+    return render(request, "web/partials/file_list.html", context)
+
+
+@login_required(login_url="/login/")
+def create_folder_view(request):
+    if request.method != "POST":
+        return redirect("files")
+
+    folder_name = request.POST.get("folder_name", "").strip()
+    current_path = request.POST.get("current_path", "").strip()
+
+    if not folder_name:
+        return redirect("files")
+
+    if current_path:
+        path = f"/{current_path}/{folder_name}/.keep"
+    else:
+        path = f"/{folder_name}/.keep"
+
+    try:
+        services.upload_file(
+            user=request.user,
+            path=path,
+            name=".keep",
+            file_data=b"",
+            client_version=0,
+        )
+    except ConflictException:
+        pass
+
+    context = _get_folder_context(request.user, current_path)
+    return render(request, "web/partials/file_list.html", context)
 
 
 @login_required(login_url="/login/")
@@ -75,8 +149,9 @@ def delete_view(request, file_id):
     except FileNotFoundException:
         pass
 
-    files = services.get_all_files(request.user)
-    return render(request, "web/partials/file_list.html", {"files": files})
+    current_path = request.POST.get("current_path", "").strip()
+    context = _get_folder_context(request.user, current_path)
+    return render(request, "web/partials/file_list.html", context)
 
 
 @login_required(login_url="/login/")
@@ -85,9 +160,11 @@ def rename_view(request, file_id):
         return redirect("files")
 
     new_name = request.POST.get("new_name", "").strip()
+    current_path = request.POST.get("current_path", "").strip()
+
     if not new_name:
-        files = services.get_all_files(request.user)
-        return render(request, "web/partials/file_list.html", {"files": files})
+        context = _get_folder_context(request.user, current_path)
+        return render(request, "web/partials/file_list.html", context)
 
     try:
         file_obj = services.get_file(request.user, file_id)
@@ -99,8 +176,8 @@ def rename_view(request, file_id):
     except FileNotFoundException:
         pass
 
-    files = services.get_all_files(request.user)
-    return render(request, "web/partials/file_list.html", {"files": files})
+    context = _get_folder_context(request.user, current_path)
+    return render(request, "web/partials/file_list.html", context)
 
 
 @login_required(login_url="/login/")
