@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "sync_app.apps.SyncAppConfig",
     "accounts.apps.AccountsConfig",
+    "web.apps.WebConfig",
     "drf_spectacular",
 ]
 
