@@ -1,23 +1,15 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout, get_user_model
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from sync_app import services
-from sync_app.models import File
+from sync_app.models import File, Folder
 from sync_app.exceptions import FileNotFoundException, ConflictException
+from .services import get_folder_context
+from .forms import FileUploadForm, CreateFolderForm, RenameFileForm
 
 User = get_user_model()
 
-
-def login_view(request):
-    if request.method == "POST":
-        username = request.POST.get("username")
-        password = request.POST.get("password")
-        user = authenticate(request, username=username, password=password)
-        if user:
-            login(request, user)
-            return redirect("files")
-        return render(request, "web/login.html", {"error": "Invalid credentials"})
-    return render(request, "web/login.html")
+FILE_LIST_PARTIAL = "web/partials/file_list.html"
 
 
 def register_view(request):
@@ -32,64 +24,23 @@ def register_view(request):
     return render(request, "web/register.html")
 
 
-def logout_view(request):
-    logout(request)
-    return redirect("login")
-
-
-def _get_folder_context(user, current_path):
-    current_path = current_path.strip("/")
-    all_files = services.get_all_files(user)
-
-    prefix = f"/{current_path}/" if current_path else "/"
-
-    files_here = []
-    subfolder_names = set()
-
-    for f in all_files:
-        if not f.path.startswith(prefix):
-            continue
-
-        relative = f.path[len(prefix):]
-
-        if "/" in relative:
-            subfolder_names.add(relative.split("/")[0])
-        else:
-            files_here.append(f)
-
-    breadcrumbs = []
-    if current_path:
-        parts = current_path.split("/")
-        for i, part in enumerate(parts):
-            breadcrumbs.append({
-                "name": part,
-                "path": "/".join(parts[: i + 1]),
-            })
-
-    return {
-        "files": files_here,
-        "subfolders": sorted(subfolder_names),
-        "current_path": current_path,
-        "breadcrumbs": breadcrumbs,
-    }
-
-
-@login_required(login_url="/login/")
+@login_required
 def files_view(request, folder_path=""):
-    context = _get_folder_context(request.user, folder_path)
+    context = get_folder_context(request.user, folder_path)
     return render(request, "web/files.html", context)
 
 
-@login_required(login_url="/login/")
+@login_required
 def upload_view(request):
     if request.method != "POST":
         return redirect("files")
 
-    file = request.FILES.get("file")
-    if not file:
+    form = FileUploadForm(request.POST, request.FILES)
+    if not form.is_valid():
         return redirect("files")
 
-    current_path = request.POST.get("current_path", "").strip()
+    file = form.cleaned_data["file"]
+    current_path = form.cleaned_data["current_path"].strip()
 
     if current_path:
         path = f"/{current_path}/{file.name}"
@@ -107,42 +58,30 @@ def upload_view(request):
     except ConflictException:
         pass
 
-    context = _get_folder_context(request.user, current_path)
-    return render(request, "web/partials/file_list.html", context)
+    context = get_folder_context(request.user, current_path)
+    return render(request, FILE_LIST_PARTIAL, context)
 
 
-@login_required(login_url="/login/")
+@login_required
 def create_folder_view(request):
     if request.method != "POST":
         return redirect("files")
 
-    folder_name = request.POST.get("folder_name", "").strip()
-    current_path = request.POST.get("current_path", "").strip()
-
-    if not folder_name:
+    form = CreateFolderForm(request.POST)
+    if not form.is_valid():
         return redirect("files")
 
-    if current_path:
-        path = f"/{current_path}/{folder_name}/.keep"
-    else:
-        path = f"/{folder_name}/.keep"
+    folder_name = form.cleaned_data["folder_name"].strip()
+    current_path = form.cleaned_data["current_path"].strip()
 
-    try:
-        services.upload_file(
-            user=request.user,
-            path=path,
-            name=".keep",
-            file_data=b"",
-            client_version=0,
-        )
-    except ConflictException:
-        pass
+    parent = Folder.objects.resolve_path(request.user, current_path)
+    services.create_folder(request.user, folder_name, parent)
 
-    context = _get_folder_context(request.user, current_path)
-    return render(request, "web/partials/file_list.html", context)
+    context = get_folder_context(request.user, current_path)
+    return render(request, FILE_LIST_PARTIAL, context)
 
 
-@login_required(login_url="/login/")
+@login_required
 def delete_view(request, file_id):
     try:
         services.delete_file(request.user, file_id)
@@ -150,21 +89,24 @@ def delete_view(request, file_id):
         pass
 
     current_path = request.POST.get("current_path", "").strip()
-    context = _get_folder_context(request.user, current_path)
-    return render(request, "web/partials/file_list.html", context)
+    context = get_folder_context(request.user, current_path)
+    return render(request, FILE_LIST_PARTIAL, context)
 
 
-@login_required(login_url="/login/")
+@login_required
 def rename_view(request, file_id):
     if request.method != "POST":
         return redirect("files")
 
-    new_name = request.POST.get("new_name", "").strip()
+    form = RenameFileForm(request.POST)
     current_path = request.POST.get("current_path", "").strip()
 
-    if not new_name:
-        context = _get_folder_context(request.user, current_path)
-        return render(request, "web/partials/file_list.html", context)
+    if not form.is_valid():
+        context = get_folder_context(request.user, current_path)
+        return render(request, FILE_LIST_PARTIAL, context)
+
+    new_name = form.cleaned_data["new_name"].strip()
+    current_path = form.cleaned_data["current_path"].strip()
 
     try:
         file_obj = services.get_file(request.user, file_id)
@@ -176,11 +118,11 @@ def rename_view(request, file_id):
     except FileNotFoundException:
         pass
 
-    context = _get_folder_context(request.user, current_path)
-    return render(request, "web/partials/file_list.html", context)
+    context = get_folder_context(request.user, current_path)
+    return render(request, FILE_LIST_PARTIAL, context)
 
 
-@login_required(login_url="/login/")
+@login_required
 def download_view(request, file_id):
     try:
         download_url, _ = services.download_file(request.user, file_id)
@@ -190,13 +132,13 @@ def download_view(request, file_id):
     return redirect(download_url)
 
 
-@login_required(login_url="/login/")
+@login_required
 def trash_view(request):
     files = File.objects.deleted_for_user(request.user)
     return render(request, "web/trash.html", {"files": files})
 
 
-@login_required(login_url="/login/")
+@login_required
 def restore_view(request, file_id):
     try:
         services.restore_file(request.user, file_id)
@@ -207,7 +149,7 @@ def restore_view(request, file_id):
     return render(request, "web/partials/trash_list.html", {"files": files})
 
 
-@login_required(login_url="/login/")
+@login_required
 def history_view(request, file_id):
     try:
         file_obj = services.get_file(request.user, file_id)
@@ -215,6 +157,4 @@ def history_view(request, file_id):
     except FileNotFoundException:
         return redirect("files")
 
-    return render(
-        request, "web/history.html", {"file": file_obj, "versions": versions}
-    )
+    return render(request, "web/history.html", {"file": file_obj, "versions": versions})

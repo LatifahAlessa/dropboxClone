@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="auth-card">
-    {% if error %}<p class="error">{{ error }}</p>{% endif %}
+    {% if form.errors %}<p class="error">Invalid credentials</p>{% endif %}
     <p class="auth-title">Log in</p>
     <form method="post">
         {% csrf_token %}

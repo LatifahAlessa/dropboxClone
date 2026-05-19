@@ -2,12 +2,12 @@
     {% for folder in subfolders %}
     <div class="file-row folder-row">
         {% if current_path %}
-        <a class="folder-link" href="/folder/{{ current_path }}/{{ folder }}/">
+        <a class="folder-link" href="/folder/{{ current_path }}/{{ folder.name }}/">
         {% else %}
-        <a class="folder-link" href="/folder/{{ folder }}/">
+        <a class="folder-link" href="/folder/{{ folder.name }}/">
         {% endif %}
             <i class="fa fa-folder"></i>
-            <span class="folder-name">{{ folder }}</span>
+            <span class="folder-name">{{ folder.name }}</span>
         </a>
     </div>
     {% endfor %}
@@ -15,7 +15,6 @@
 
 {% if files %}
     {% for file in files %}
-    {% if file.name != ".keep" %}
     <div class="file-row" id="file-{{ file.id }}">
         <div class="file-info">
             <i class="fa fa-file"></i>
@@ -39,7 +38,6 @@
             ><i class="fa fa-trash"></i></button>
         </div>
     </div>
-    {% endif %}
     {% endfor %}
 {% endif %}
 

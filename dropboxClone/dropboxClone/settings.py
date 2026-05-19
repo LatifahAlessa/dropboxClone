@@ -165,3 +165,6 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 PRESIGNED_URL_EXPIRY = 3600
+
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"
