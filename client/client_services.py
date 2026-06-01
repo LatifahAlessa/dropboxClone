@@ -20,23 +20,29 @@ def upload_file(local_path, state, is_new):
 
     if file_id:
         current_version = state["versions"].get(str(file_id), 0)
-        current_hash = get_file_hash(local_path)
+        try:
+            current_hash = get_file_hash(local_path)
+        except FileNotFoundError:
+            return state, False
         stored_hash = state.get("hashes", {}).get(str(file_id))
         if stored_hash and current_hash == stored_hash:
             print(f"{UPLOAD_SKIPPED}: {relative_path}")
             return state, False
 
-    with open(local_path, "rb") as f:
-        response = authenticated_request(
-            "POST",
-            f"{SERVER_URL}/files/",
-            data={
-                "path": relative_path,
-                "name": os.path.basename(local_path),
-            },
-            files={"file": f},
-            headers={"X-Client-Version": str(current_version)},
-        )
+    try:
+        with open(local_path, "rb") as f:
+            response = authenticated_request(
+                "POST",
+                f"{SERVER_URL}/files/",
+                data={
+                    "path": relative_path,
+                    "name": os.path.basename(local_path),
+                },
+                files={"file": f},
+                headers={"X-Client-Version": str(current_version)},
+            )
+    except FileNotFoundError:
+        return state, False
 
     if not response:
         return state, False

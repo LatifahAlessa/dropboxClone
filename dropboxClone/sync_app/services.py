@@ -1,5 +1,6 @@
-from .models import File, FileVersion
+from .models import File, FileVersion, Folder
 import hashlib
+from django.db import IntegrityError
 from django.db.models import QuerySet
 from . import storage
 from .exceptions import (
@@ -10,10 +11,32 @@ from .exceptions import (
 )
 
 
+def create_folder_path(user, path):
+    parts = path.strip("/").split("/")
+    if len(parts) <= 1:
+        return None
+
+    folder_names = parts[:-1]
+    parent = None
+
+    for name in folder_names:
+        try:
+            folder, _ = Folder.objects.get_or_create(
+                user=user, parent=parent, name=name
+            )
+        except IntegrityError:
+            folder = Folder.objects.get(user=user, parent=parent, name=name)
+        parent = folder
+
+    return parent
+
+
 # UPLOAD
 def upload_file(user, path, name, file_data, client_version) -> File:
+    folder = create_folder_path(user, path)
+
     file_obj, created = File.objects.get_or_create(
-        user=user, path=path, defaults={"name": name}
+        user=user, path=path, defaults={"name": name, "folder": folder}
     )
 
     if not created and client_version != file_obj.current_version:
@@ -109,8 +132,10 @@ def rename_file(user, file_id, new_path, new_name) -> File:
         size=0,
     )
 
+    new_folder = create_folder_path(user, new_path)
     file_obj.path = new_path
     file_obj.name = new_name
+    file_obj.folder = new_folder
     file_obj.save()
 
     return file_obj
@@ -200,3 +225,23 @@ def restore_file(user, file_id) -> File:
     )
 
     return file_obj
+
+
+def create_folder(user, name, parent=None) -> Folder:
+    folder, _ = Folder.objects.get_or_create(user=user, parent=parent, name=name)
+    return folder
+
+
+def get_folder(user, folder_id) -> Folder:
+    try:
+        return Folder.objects.for_user(user).get(id=folder_id)
+    except Folder.DoesNotExist:
+        raise FileNotFoundException()
+
+
+def get_subfolders(user, parent=None) -> QuerySet:
+    return Folder.objects.children_of(user, parent)
+
+
+def get_files_in_folder(user, folder=None) -> QuerySet:
+    return File.objects.in_folder(user, folder)

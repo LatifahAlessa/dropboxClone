@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "sync_app.apps.SyncAppConfig",
     "accounts.apps.AccountsConfig",
+    "web.apps.WebConfig",
     "drf_spectacular",
 ]
 
@@ -164,3 +165,6 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 }
 PRESIGNED_URL_EXPIRY = 3600
+
+LOGIN_URL = "/login/"
+LOGIN_REDIRECT_URL = "/"

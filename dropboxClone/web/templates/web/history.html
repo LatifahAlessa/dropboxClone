@@ -1,0 +1,31 @@
+{% extends "web/base.html" %}
+{% block title %}History - {{ file.name }}{% endblock %}
+{% block content %}
+<div class="header">
+    <h1><i class="fa fa-clock-rotate-left"></i> {{ file.name }}</h1>
+    <a href="{% url 'files' %}" class="btn btn-secondary">Back to Files</a>
+</div>
+
+<div class="card">
+    {% if versions %}
+        {% for version in versions %}
+        <div class="file-row">
+            <div class="version-info">
+                <span class="version-label">v{{ version.version_num }}</span>
+                <span class="version-type">{{ version.operation_type }}</span>
+                <span class="version-date">{{ version.created_at|date:"M d, Y H:i" }}</span>
+            </div>
+            <div class="file-actions">
+                {% if version.storage_path and version.operation_type != "DELETE" %}
+                <a href="{% url 'download' file.id %}?version={{ version.version_num }}" class="btn btn-secondary" title="Download this version">
+                    <i class="fa fa-download"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p class="empty-state">No history available.</p>
+    {% endif %}
+</div>
+{% endblock %}
