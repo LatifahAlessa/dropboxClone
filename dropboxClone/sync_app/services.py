@@ -3,6 +3,7 @@ import hashlib
 from django.db import IntegrityError
 from django.db.models import QuerySet
 from . import storage
+from .thumbnails import generate_thumbnail
 from .exceptions import (
     FileNotFoundException,
     VersionNotFoundException,
@@ -34,7 +35,6 @@ def create_folder_path(user, path):
 # UPLOAD
 def upload_file(user, path, name, file_data, client_version) -> File:
     folder = create_folder_path(user, path)
-
     file_obj, created = File.objects.get_or_create(
         user=user, path=path, defaults={"name": name, "folder": folder}
     )
@@ -43,7 +43,6 @@ def upload_file(user, path, name, file_data, client_version) -> File:
         raise ConflictException()
 
     file_hash = hashlib.md5(file_data).hexdigest()
-
     latest_version = (
         FileVersion.objects.content_versions(file_obj).order_by("-version_num").first()
     )
@@ -52,8 +51,13 @@ def upload_file(user, path, name, file_data, client_version) -> File:
 
     new_version = file_obj.current_version + 1 if not created else 1
     storage_key = f"users/{user.id}/v{new_version}/{path.lstrip('/')}"
-
     storage.upload_to_storage(file_data, storage_key)
+
+    thumbnail_data = generate_thumbnail(file_data, path)
+    if thumbnail_data:
+        thumbnail_key = f"users/{user.id}/thumbnails/{path.lstrip('/')}.jpg"
+        storage.upload_to_storage(thumbnail_data, thumbnail_key)
+        file_obj.thumbnail_path = thumbnail_key
 
     FileVersion.objects.create(
         file=file_obj,
@@ -69,7 +73,6 @@ def upload_file(user, path, name, file_data, client_version) -> File:
     file_obj.save()
 
     old_versions = FileVersion.objects.for_file(file_obj)[5:]
-
     for version in old_versions:
         if version.storage_path:
             storage.delete_from_storage(version.storage_path)

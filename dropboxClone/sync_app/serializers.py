@@ -1,11 +1,26 @@
 from rest_framework import serializers
 from .models import File, FileVersion
+from . import storage
 
 
 class FileSerializer(serializers.ModelSerializer):
+    thumbnail_url = serializers.SerializerMethodField()
+
     class Meta:
         model = File
-        fields = ["id", "path", "name", "current_version", "last_modified_time"]
+        fields = [
+            "id",
+            "path",
+            "name",
+            "current_version",
+            "last_modified_time",
+            "thumbnail_url",
+        ]
+
+    def get_thumbnail_url(self, obj):
+        if not obj.thumbnail_path:
+            return None
+        return storage.get_presigned_url(obj.thumbnail_path)
 
 
 class FileVersionSerializer(serializers.ModelSerializer):

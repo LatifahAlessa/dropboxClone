@@ -45,6 +45,7 @@ class File(models.Model):
     is_deleted = models.BooleanField(default=False)
     current_version = models.IntegerField(default=1)
     last_modified_time = models.DateTimeField(auto_now=True)
+    thumbnail_path = models.CharField(max_length=500, blank=True, null=True)
     objects = FileManager()
 
     class Meta:

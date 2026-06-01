@@ -162,6 +162,16 @@ input[type="email"] {
   color: #666;
 }
 
+.file-thumbnail {
+  width: 40px;
+  height: 40px;
+  max-width: 40px;
+  max-height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
 .folder-row .folder-link {
   display: flex;
   align-items: center;

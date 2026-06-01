@@ -1,4 +1,4 @@
-altgraph @ file:///AppleInternal/Library/BuildRoots/39d9dc1a-2111-11f0-be06-226177e5bb69/Library/Caches/com.apple.xbs/Sources/python3/altgraph-0.17.2-py2.py3-none-any.whl
+altgraph==0.17.2
 asgiref==3.11.1
 boto3==1.42.97
 botocore==1.42.97
@@ -6,15 +6,17 @@ Django==4.2.30
 django-storages==1.14.6
 djangorestframework==3.16.1
 djangorestframework-simplejwt==5.5.1
-djangorestframework_simplejwt==5.5.1
-future @ file:///AppleInternal/Library/BuildRoots/39d9dc1a-2111-11f0-be06-226177e5bb69/Library/Caches/com.apple.xbs/Sources/python3/future-0.18.2-py3-none-any.whl
+future==0.18.2
 jmespath==1.1.0
-macholib @ file:///AppleInternal/Library/BuildRoots/39d9dc1a-2111-11f0-be06-226177e5bb69/Library/Caches/com.apple.xbs/Sources/python3/macholib-1.15.2-py2.py3-none-any.whl
+macholib==1.15.2
 PyJWT==2.12.1
 python-dateutil==2.9.0.post0
 s3transfer==0.16.1
-six @ file:///AppleInternal/Library/BuildRoots/39d9dc1a-2111-11f0-be06-226177e5bb69/Library/Caches/com.apple.xbs/Sources/python3/six-1.15.0-py2.py3-none-any.whl
+six==1.15.0
 sqlparse==0.5.5
 typing_extensions==4.15.0
 urllib3==1.26.20
 uuid7==0.1.0
+Pillow==10.3.0
+ffmpeg-python==0.2.0
+pdf2image==1.17.0
