@@ -22,10 +22,14 @@
 
 <div class="drop-zone" id="drop-zone">
     <i class="fa fa-cloud-upload-alt"></i>
-    <p>Drag & drop files here or</p>
+    <p>Drag & drop files or folders here or</p>
     <label class="btn btn-primary upload-btn">
-        Browse
+        Browse Files
         <input type="file" name="file" id="file-input" hidden multiple>
+    </label>
+    <label class="btn btn-secondary upload-btn">
+        Browse Folder
+        <input type="file" name="folder" id="folder-input" hidden webkitdirectory>
     </label>
 </div>
 
@@ -47,6 +51,7 @@
 <script>
 var dropZone = document.getElementById("drop-zone");
 var fileInput = document.getElementById("file-input");
+var folderInput = document.getElementById("folder-input");
 var csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
 var currentPath = "{{ current_path }}";
 
@@ -62,20 +67,93 @@ dropZone.addEventListener("dragleave", function() {
 dropZone.addEventListener("drop", function(e) {
     e.preventDefault();
     dropZone.classList.remove("drop-zone--active");
-    uploadFiles(e.dataTransfer.files);
+    var items = e.dataTransfer.items;
+    if (items && items.length > 0 && items[0].webkitGetAsEntry) {
+        handleDropItems(items);
+    } else {
+        uploadFileList(e.dataTransfer.files);
+    }
 });
 
 fileInput.addEventListener("change", function() {
-    uploadFiles(fileInput.files);
+    uploadFileList(fileInput.files);
     fileInput.value = "";
 });
 
-function uploadFiles(files) {
+folderInput.addEventListener("change", function() {
+    uploadFileList(folderInput.files, true);
+    folderInput.value = "";
+});
+
+function handleDropItems(items) {
+    var fileEntries = [];
+    var pending = 0;
+
+    function traverseEntry(entry, path) {
+        if (entry.isFile) {
+            pending++;
+            entry.file(function(file) {
+                fileEntries.push({file: file, relativePath: path + file.name});
+                pending--;
+                if (pending === 0) uploadEntries(fileEntries);
+            });
+        } else if (entry.isDirectory) {
+            pending++;
+            var reader = entry.createReader();
+            reader.readEntries(function(entries) {
+                for (var i = 0; i < entries.length; i++) {
+                    traverseEntry(entries[i], path + entry.name + "/");
+                }
+                pending--;
+                if (pending === 0) uploadEntries(fileEntries);
+            });
+        }
+    }
+
+    for (var i = 0; i < items.length; i++) {
+        var entry = items[i].webkitGetAsEntry();
+        if (entry) traverseEntry(entry, "");
+    }
+}
+
+function uploadEntries(entries) {
+    var remaining = entries.length;
+    entries.forEach(function(entry) {
+        var fullPath = currentPath
+            ? "/" + currentPath + "/" + entry.relativePath
+            : "/" + entry.relativePath;
+        var formData = new FormData();
+        formData.append("file", entry.file);
+        formData.append("current_path", currentPath);
+        formData.append("relative_path", entry.relativePath);
+        fetch("{% url 'upload' %}", {
+            method: "POST",
+            headers: {"X-CSRFToken": csrfToken},
+            body: formData
+        }).then(function(response) {
+            return response.text();
+        }).then(function(html) {
+            remaining--;
+            if (remaining === 0) {
+                document.getElementById("file-list").innerHTML = html;
+            }
+        });
+    });
+}
+
+function uploadFileList(files, isFolder) {
     var remaining = files.length;
     Array.from(files).forEach(function(file) {
+        var relativePath = "";
+        if (isFolder && file.webkitRelativePath) {
+            relativePath = file.webkitRelativePath;
+        }
         var formData = new FormData();
         formData.append("file", file);
         formData.append("current_path", currentPath);
+        if (relativePath) {
+            formData.append("relative_path", relativePath);
+        }
         fetch("{% url 'upload' %}", {
             method: "POST",
             headers: {"X-CSRFToken": csrfToken},
