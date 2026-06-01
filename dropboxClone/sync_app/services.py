@@ -3,6 +3,7 @@ import hashlib
 from django.db import IntegrityError
 from django.db.models import QuerySet
 from . import storage
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from .exceptions import (
     FileNotFoundException,
     VersionNotFoundException,
@@ -76,6 +77,50 @@ def upload_file(user, path, name, file_data, client_version) -> File:
         version.delete()
 
     return file_obj
+
+
+# Bulk Upload
+def bulk_upload_files(user, files, paths, client_version) -> list:
+    def upload_single(file, path):
+        name = file.name
+        file_data = file.read()
+        return upload_file(user, path, name, file_data, client_version)
+
+    tasks = zip(files, paths)
+    results = []
+
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(upload_single, file, path): path for file, path in tasks
+        }
+        for future in as_completed(futures):
+            path = futures[future]
+            try:
+                file_obj = future.result()
+                results.append(
+                    {
+                        "path": path,
+                        "status": "success",
+                        "file": file_obj,
+                    }
+                )
+            except ConflictException:
+                results.append(
+                    {
+                        "path": path,
+                        "status": "conflict",
+                    }
+                )
+            except Exception as e:
+                results.append(
+                    {
+                        "path": path,
+                        "status": "error",
+                        "detail": str(e),
+                    }
+                )
+
+    return results
 
 
 # DELETE

@@ -41,8 +41,14 @@ def upload_view(request):
 
     file = form.cleaned_data["file"]
     current_path = form.cleaned_data["current_path"].strip()
+    relative_path = request.POST.get("relative_path", "").strip()
 
-    if current_path:
+    if relative_path:
+        if current_path:
+            path = f"/{current_path}/{relative_path}"
+        else:
+            path = f"/{relative_path}"
+    elif current_path:
         path = f"/{current_path}/{file.name}"
     else:
         path = f"/{file.name}"

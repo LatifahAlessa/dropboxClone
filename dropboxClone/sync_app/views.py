@@ -9,6 +9,7 @@ from .serializers import (
     FileVersionSerializer,
     FileUploadSerializer,
     FileRenameSerializer,
+    BulkFileUploadSerializer,
 )
 from .messages import ERROR_CONFLICT_DETECTED, FILE_NOT_FOUND, FILE_DELETE_SUCCESSFULLY
 from .exceptions import (
@@ -129,6 +130,38 @@ class FileViewSet(ViewSet):
             return Response({"error": FILE_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
 
         return Response(FileSerializer(file_obj).data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=["post"])
+    def bulk_upload(self, request):
+        serializer = BulkFileUploadSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        files = serializer.validated_data.get("files")
+        paths = serializer.validated_data.get("paths")
+        client_version = int(request.headers.get("X-Client-Version", 0))
+
+        results = services.bulk_upload_files(
+            user=request.user,
+            files=files,
+            paths=paths,
+            client_version=client_version,
+        )
+
+        response_data = [
+            {
+                "path": r["path"],
+                "status": r["status"],
+                "file": (
+                    FileSerializer(r["file"]).data if r["status"] == "success" else None
+                ),
+                "detail": r.get("detail"),
+            }
+            for r in results
+        ]
+
+        return Response(response_data, status=status.HTTP_207_MULTI_STATUS)
 
 
 @api_view(["GET"])

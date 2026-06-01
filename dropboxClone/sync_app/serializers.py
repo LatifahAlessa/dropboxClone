@@ -37,3 +37,15 @@ class FileUploadSerializer(serializers.Serializer):
 class FileRenameSerializer(serializers.Serializer):
     new_path = serializers.CharField(max_length=500)
     new_name = serializers.CharField(max_length=255)
+
+
+class BulkFileUploadSerializer(serializers.Serializer):
+    files = serializers.ListField(child=serializers.FileField())
+    paths = serializers.ListField(child=serializers.CharField(max_length=500))
+
+    def validate(self, data):
+        if len(data["files"]) != len(data["paths"]):
+            raise serializers.ValidationError(
+                "files and paths must have the same count"
+            )
+        return data
