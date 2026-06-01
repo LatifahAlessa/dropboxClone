@@ -14,25 +14,29 @@
 {% endif %}
 
 {% if files %}
-    {% for file in files %}
-    <div class="file-row" id="file-{{ file.id }}">
+    {% for item in files %}
+    <div class="file-row" id="file-{{ item.file.id }}">
         <div class="file-info">
+            {% if item.thumbnail_url %}
+            <img class="file-thumbnail" src="{{ item.thumbnail_url }}" alt="{{ item.file.name }}">
+            {% else %}
             <i class="fa fa-file"></i>
+            {% endif %}
             <span class="file-name"
                 contenteditable="true"
-                data-original="{{ file.name }}"
-                onblur="handleRename(this, '{% url 'rename' file.id %}')"
+                data-original="{{ item.file.name }}"
+                onblur="handleRename(this, '{% url 'rename' item.file.id %}')"
                 onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
-            >{{ file.name }}</span>
+            >{{ item.file.name }}</span>
         </div>
         <div class="file-actions">
-            <a href="{% url 'history' file.id %}" class="btn btn-secondary" title="History"><i class="fa fa-clock-rotate-left"></i></a>
-            <a href="{% url 'download' file.id %}" class="btn btn-secondary" title="Download"><i class="fa fa-download"></i></a>
+            <a href="{% url 'history' item.file.id %}" class="btn btn-secondary" title="History"><i class="fa fa-clock-rotate-left"></i></a>
+            <a href="{% url 'download' item.file.id %}" class="btn btn-secondary" title="Download"><i class="fa fa-download"></i></a>
             <button
                 class="btn btn-danger"
-                hx-post="{% url 'delete' file.id %}"
+                hx-post="{% url 'delete' item.file.id %}"
                 hx-target="#file-list"
-                hx-confirm="Delete {{ file.name }}?"
+                hx-confirm="Delete {{ item.file.name }}?"
                 hx-vals='{"current_path": "{{ current_path }}"}'
                 title="Delete"
             ><i class="fa fa-trash"></i></button>

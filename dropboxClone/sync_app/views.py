@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.viewsets import ViewSet
-from . import services
+from . import services, storage
 from .serializers import (
     FileSerializer,
     FileVersionSerializer,
@@ -120,6 +120,21 @@ class FileViewSet(ViewSet):
         return Response(
             FileVersionSerializer(versions, many=True).data, status=status.HTTP_200_OK
         )
+
+    @action(detail=True, methods=["get"])
+    def thumbnail(self, request, pk=None):
+        try:
+            file_obj = services.get_file(request.user, pk)
+        except FileNotFoundException:
+            return Response({"error": FILE_NOT_FOUND}, status=status.HTTP_404_NOT_FOUND)
+
+        if not file_obj.thumbnail_path:
+            return Response(
+                {"error": "no thumbnail available"}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        thumbnail_url = storage.get_presigned_url(file_obj.thumbnail_path)
+        return Response({"thumbnail_url": thumbnail_url}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=["post"])
     def restore(self, request, pk=None):
